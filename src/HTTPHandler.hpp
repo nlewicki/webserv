@@ -7,11 +7,22 @@
 struct Request
 {
 	std::string method;
-	std::string uri;
-	std::string http_version;
+	std::string path;
+	std::string version;
 	std::map<std::string, std::string> headers;
 	std::string body;
 };
 
+class RequestParser
+{
+	public:
+		RequestParser();
+		~RequestParser();
 
+		Request parse(const std::string& rawRequest);
+
+	private:
+		void parseRequestLine(const std::string& line, Request& req);
+		void parseHeaderLine(const std::string& line, Request& req);
+};
 #endif
