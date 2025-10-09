@@ -40,3 +40,27 @@ Request RequestParser::parse(const std::string& rawRequest)
 
     return req;
 }
+
+void RequestParser::parseRequestLine(const std::string& line, Request& req)
+{
+	std::istringstream ss(line);
+	ss >> req.method >> req.path >> req.version;
+
+	if (req.method.empty() || req.path.empty() || req.version.empty())
+		std::cerr << "Invalid request line" << std::endl;
+}
+
+void RequestParser::parseHeaderLine(const std::string& line, Request& req)
+{
+	size_t pos = line.find(':');
+	if (pos == std::string::npos)
+		return;
+
+	std::string key = line.substr(0, pos);
+	std::string value = line.substr(pos + 1);
+
+	if (!value.empty() && value[0] == ' ')
+        value.erase(0, 1);
+
+    req.headers[key] = value;
+}
