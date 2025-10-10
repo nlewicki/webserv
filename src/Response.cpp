@@ -21,7 +21,35 @@ std::string Response::toString() const
 
 Response handleRequest(const Request& req)
 {
+	Response res;
 
+	// default headers
+	res.headers["Server"] = "webserv/1.0";
+    res.headers["Connection"] = "close";
+    res.headers["Content-Type"] = "text/html";
+
+	if (req.method == "GET")
+	{
+		std::string path = "." + req.path;
+	}
+	else if (req.method == "POST")
+	{
+		res.statusCode = 200;
+		res.reasonPhrase = getStatusMessage(200);
+		res.body = "<h1>POST received!</h1><p>" + req.body + "</p>";
+	}
+	else if (req.method == "DELETE")
+	{
+
+	}
+	else
+	{
+		res.statusCode = 405;
+		res.reasonPhrase = getStatusMessage(405);
+        res.body = "<h1>405 Method Not Allowed</h1>";
+	}
+	res.headers ["Content-Length"] = std::to_string(res.body.size());
+	return res;
 }
 
 std::string getStatusMessage(int code)
