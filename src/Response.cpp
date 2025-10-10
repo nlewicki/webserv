@@ -26,7 +26,13 @@ Response handleRequest(const Request& req)
 
 std::string getStatusMessage(int code)
 {
-
+	switch (code)
+	{
+		case 200: return "OK";
+		case 404: return "Not Found";
+		case 405: return "Method not Allowed";
+		default : return "Unkown";
+	}
 }
 
 std::string readFile(const std::string& path)
