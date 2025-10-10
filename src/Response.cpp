@@ -19,3 +19,29 @@ std::string Response::toString() const
     return ss.str();
 }
 
+Response handleRequest(const Request& req)
+{
+
+}
+
+std::string getStatusMessage(int code)
+{
+
+}
+
+std::string readFile(const std::string& path)
+{
+	std::ifstream file(path.c_str());
+	if (!file.is_open())
+		return "<h1>Error opening file</h1>";;
+	
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	return buffer.str();
+}
+
+bool fileExists(const std::string& path)
+{
+	struct stat buf;
+	return (stat(path.c_str(), &buf) == 0);
+}
