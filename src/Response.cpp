@@ -19,7 +19,35 @@ std::string Response::toString() const
     return ss.str();
 }
 
-Response handleRequest(const Request& req)
+std::string ResponseHandler::getStatusMessage(int code)
+{
+	switch (code)
+	{
+		case 200: return "OK";
+		case 404: return "Not Found";
+		case 405: return "Method not Allowed";
+		default : return "Unkown";
+	}
+}
+
+std::string ResponseHandler::readFile(const std::string& path)
+{
+	std::ifstream file(path.c_str());
+	if (!file.is_open())
+		return "<h1>Error opening file</h1>";;
+	
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	return buffer.str();
+}
+
+bool ResponseHandler::fileExists(const std::string& path)
+{
+	struct stat buf;
+	return (stat(path.c_str(), &buf) == 0);
+}
+
+Response ResponseHandler::handleRequest(const Request& req)
 {
 	Response res;
 
@@ -72,35 +100,7 @@ Response handleRequest(const Request& req)
 		res.reasonPhrase = getStatusMessage(405);
         res.body = "<h1>405 Method Not Allowed</h1>";
 	}
-	
+
 	res.headers ["Content-Length"] = std::to_string(res.body.size());
 	return res;
-}
-
-std::string getStatusMessage(int code)
-{
-	switch (code)
-	{
-		case 200: return "OK";
-		case 404: return "Not Found";
-		case 405: return "Method not Allowed";
-		default : return "Unkown";
-	}
-}
-
-std::string readFile(const std::string& path)
-{
-	std::ifstream file(path.c_str());
-	if (!file.is_open())
-		return "<h1>Error opening file</h1>";;
-	
-	std::stringstream buffer;
-	buffer << file.rdbuf();
-	return buffer.str();
-}
-
-bool fileExists(const std::string& path)
-{
-	struct stat buf;
-	return (stat(path.c_str(), &buf) == 0);
 }
