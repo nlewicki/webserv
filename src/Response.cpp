@@ -31,6 +31,18 @@ Response handleRequest(const Request& req)
 	if (req.method == "GET")
 	{
 		std::string path = "." + req.path;
+		if (!fileExists(path))
+		{
+			res.statusCode = 404;
+			res.reasonPhrase = getStatusMessage(404);
+			res.body = "<h1>404 Not Found</h1>";
+		}
+		else
+		{
+			res.statusCode = 200;
+			res.reasonPhrase = getStatusMessage(200);
+			res.body = readFile(path);
+		}
 	}
 	else if (req.method == "POST")
 	{
@@ -40,7 +52,19 @@ Response handleRequest(const Request& req)
 	}
 	else if (req.method == "DELETE")
 	{
-
+		std::string path = "." + req.path;
+		if (fileExists(path) && std::remove(path.c_str()) == 0)
+		{
+			res.statusCode = 200;
+			res.reasonPhrase = getStatusMessage(200);
+			res.body = "<h1>File deleted successfully.</h1>";
+		}
+		else
+		{
+			res.statusCode = 404;
+			res.reasonPhrase = getStatusMessage(404);
+			res.body = "<h1>404 File not found.</h1>";
+		}
 	}
 	else
 	{
@@ -48,6 +72,7 @@ Response handleRequest(const Request& req)
 		res.reasonPhrase = getStatusMessage(405);
         res.body = "<h1>405 Method Not Allowed</h1>";
 	}
+	
 	res.headers ["Content-Length"] = std::to_string(res.body.size());
 	return res;
 }
