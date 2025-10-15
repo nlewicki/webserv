@@ -9,6 +9,7 @@ struct Request
 	std::string method;
 	std::string path;
 	std::string version;
+	std::string query;
 	std::map<std::string, std::string> headers;
 	std::string body;
 };
