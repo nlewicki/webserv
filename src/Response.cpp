@@ -1,4 +1,5 @@
 #include "Response.hpp"
+#include "CGIHandler.hpp"
 #include <fstream>
 #include <sstream>
 #include <sys/stat.h>
@@ -17,6 +18,16 @@ std::string Response::toString() const
     ss << "\r\n";
     ss << body;
     return ss.str();
+}
+
+static bool isCGIRequest(const std::string& path)
+{
+    size_t dot = path.find_last_of('.');
+    if (dot == std::string::npos)
+        return false;
+
+    std::string ext = path.substr(dot + 1);
+    return (ext == "py" || ext == "php" || ext == "cgi");
 }
 
 std::string ResponseHandler::getStatusMessage(int code)
@@ -56,9 +67,15 @@ Response ResponseHandler::handleRequest(const Request& req)
     res.headers["Connection"] = "close";
     res.headers["Content-Type"] = "text/html";
 
+	std::string path = "." + req.path;
+
+	if (isCGIRequest(req.path))
+	{
+		CGIHandler cgi;
+		return cgi.execute(req);
+	}
 	if (req.method == "GET")
 	{
-		std::string path = "." + req.path;
 		if (!fileExists(path))
 		{
 			res.statusCode = 404;
