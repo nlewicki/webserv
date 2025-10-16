@@ -83,5 +83,30 @@ std::string CGIHandler::runCGI(const std::string& scriptPath, const std::map<std
 		perror("execve");
 		exit(1);
 	}
-	
+	else if (pid > 0)
+	{
+		close(pipeIn[0]);
+		close(pipeOut[1]);
+
+		// schreibe Request-Body an CGI
+		if (!body.empty())
+			write(pipeIn[1], body.c_str(), body.size());
+		close(pipeIn[1]);
+
+		// lese Ausgabe vom CGI
+		std::ostringstream output;
+		char buffer[4096];
+		ssize_t bytes;
+		while ((bytes = read(pipeOut[0], buffer, sizeof(buffer))) > 0)
+			output.write(buffer, bytes);
+		close(pipeOut[0]);
+
+		waitpid(pid, NULL, 0);
+		return output.str();
+	}
+	else
+	{
+		perror("fork");
+		return "<h1>CGI fork error</h1>";
+	}
 }
