@@ -74,3 +74,30 @@ int main() {
     close(server_fd);
     return 0;
 }
+
+
+
+
+std::vector<pollfd> fds;
+std::unordered_set<int> listener_fds;
+
+int add_listener(uint16_t port) {
+    int s = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (s < 0) { perror("socket"); return -1; }
+    int yes = 1;
+    ::setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+    sockaddr_in a{}; 
+    a.sin_family = AF_INET;
+    a.sin_addr.s_addr = htonl(INADDR_ANY);    // 0.0.0.0
+    a.sin_port = htons(port);
+    if (::bind(s, (sockaddr*)&a, sizeof(a)) < 0) { perror("bind"); ::close(s); return -1; }
+    if (::listen(s, 128) < 0) { perror("listen"); ::close(s); return -1; }
+    make_nonblocking(s);
+
+    pollfd p{}; p.fd = s; p.events = POLLIN; p.revents = 0;
+    fds.push_back(p);
+    listener_fds.insert(s);
+    std::cout << "Listening on 0.0.0.0:" << port << "\n";
+    return s;
+}

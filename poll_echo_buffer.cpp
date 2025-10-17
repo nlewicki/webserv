@@ -10,6 +10,7 @@
 #include <poll.h>
 #include <csignal>
 #include <ctime>
+#include <chrono>
 
 int make_nonblocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -17,8 +18,10 @@ int make_nonblocking(int fd) {
 }
 
 struct Client {
-    std::string buffer;   // Daten, die noch gesendet werden müssen
+    std::string rx;
+    std::string tx;
     long last_active_ms;
+    bool        header_done = false;
 };
 
 int main() {
@@ -45,11 +48,12 @@ int main() {
     std::cout << "Echo server with write-buffer on port 8080...\n";
 
     while (true) {
-        const long IDLE_MS = 15000;
-        long now_ms = (long)(::time(NULL) * 1000L); // simpel genügt hier
+        const long IDLE_MS = 3000; // 3s
+        using clock_t = std::chrono::steady_clock;
+        using ms      = std::chrono::milliseconds;
+
+        auto now_ms = std::chrono::duration_cast<ms>(clock_t::now().time_since_epoch()).count();
         for (size_t i = 1; i < fds.size(); ++i) {
-            // Du brauchst last_active_ms pro Client (füge field hinzu):
-            // clients[i].last_active_ms
             if (now_ms - clients[i].last_active_ms > IDLE_MS) {
                 std::cerr << "[TIMEOUT] fd=" << fds[i].fd
                         << " idle=" << (now_ms - clients[i].last_active_ms) << "ms\n";
@@ -94,11 +98,26 @@ int main() {
                     for (;;) {
                         ssize_t n = read(fds[i].fd, buf, sizeof(buf));
                         if (n > 0) {
-                            clients[i].buffer.append(buf, n); // Echo speichern
-                            clients[i].last_active_ms = now_ms;
-                            // Jetzt wollen wir schreiben, sobald möglich
-                            fds[i].events |= POLLOUT;
-                            continue;
+                            Client &c = clients[i];
+                            c.rx.append(buf, n);
+                            c.last_active_ms = now_ms;
+
+                            if (!c.header_done) {
+                                size_t pos = c.rx.find("\r\n\r\n");
+                                if (pos != std::string::npos) {
+                                    c.header_done = true;
+
+                                    static const std::string body = "Hello world!";
+                                    c.tx  = "HTTP/1.1 200 OK\r\n"
+                                            "Content-Type: text/plain\r\n"
+                                            "Content-Length: " + std::to_string(body.size()) + "\r\n"
+                                            "Connection: close\r\n"
+                                            "\r\n" + body;
+
+                                    fds[i].events |= POLLOUT;   // wir wollen senden
+                                }
+                            }
+                            continue; // evtl. weitere Bytes lesen
                         } else if (n == 0) {
                             close(fds[i].fd);
                             fds.erase(fds.begin() + i);
@@ -116,23 +135,23 @@ int main() {
                     }
                 }
 
+
                 // Schreiben
                 if (fds[i].revents & POLLOUT) {
-                    // optional: bis EAGAIN/leer mehrfach write versuchen
-                    while (!clients[i].buffer.empty()) {
-                        ssize_t m = write(fds[i].fd,
-                                          clients[i].buffer.data(),
-                                          clients[i].buffer.size());
-                        if (m > 0) {
-                            clients[i].buffer.erase(0, m);
-                            clients[i].last_active_ms = now_ms;
-                            continue;
-                        }
+                    Client &c = clients[i];
+                    while (!c.tx.empty()) {
+                        ssize_t m = write(fds[i].fd, c.tx.data(), c.tx.size());
+                        if (m > 0) { c.tx.erase(0, m); c.last_active_ms = now_ms; continue; }
                         if (m < 0 && (errno==EAGAIN || errno==EWOULDBLOCK)) break;
                         if (m < 0) { perror("write"); break; }
                     }
-                    if (clients[i].buffer.empty())
-                        fds[i].events &= ~POLLOUT; // nur lesen
+                    if (c.tx.empty()) {
+                        // Für den Anfang nach Antwort schließen (Connection: close)
+                        close(fds[i].fd);
+                        fds.erase(fds.begin()+i);
+                        clients.erase(clients.begin()+i);
+                        --i;
+                    }
                 }
             }
         }
