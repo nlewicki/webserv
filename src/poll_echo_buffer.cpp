@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <sstream>
+#include "http_bridge.hpp"
 
 enum class RxState { READING_HEADERS, READING_BODY, READY };
 
@@ -41,7 +42,8 @@ struct Client {
     // Timeout
     long last_active_ms = 0;
 
-    // (optional) keep-alive-Protokollentscheidung aus Parser (später)
+    std::string method, target, version;
+    std::unordered_map<std::string,std::string> headers; // optional, später füllen
     bool keep_alive = false;
 
     // Chunked-Decoder-Context
@@ -51,7 +53,9 @@ struct Client {
 };
 
 struct HeadInfo {
-    std::string version;                 // "HTTP/1.1" / "HTTP/1.0"
+    std::string method;
+    std::string target;
+    std::string version;
     bool keep_alive = false;
     bool is_chunked = false;
     size_t content_length = 0;
@@ -73,8 +77,7 @@ static bool parse_head_min(const std::string& head, HeadInfo& out){
     // Startzeile
     auto eol = head.find("\r\n"); if (eol==std::string::npos) return false;
     std::istringstream iss(head.substr(0, eol));
-    std::string method, target; // Core braucht wir hier noch nicht
-    if (!(iss >> method >> target >> out.version)) return false;
+    if (!(iss >> out.method >> out.target >> out.version)) return false;
 
     // Header
     std::unordered_map<std::string,std::string> H;
@@ -278,6 +281,9 @@ int main() {
                                 if (!parse_head_min(head, H)) { err400(i, fds, clients); }
                                 else if (H.version != "HTTP/1.1" && H.version != "HTTP/1.0") { err505(i, fds, clients); }
                                 else {
+                                    c.method       = H.method;
+                                    c.target       = H.target;
+                                    c.version      = H.version;
                                     c.keep_alive   = H.keep_alive;
                                     c.is_chunked   = H.is_chunked;
                                     c.content_len  = H.content_length;
@@ -313,14 +319,21 @@ int main() {
 
                                 // wenn READY -> Dummy-Response bauen (später an HTTP weiterreichen)
                                 if (c.state == RxState::READY && c.tx.empty()) {
-                                    static const std::string body = "Hello world!";
-                                    std::string conn = c.keep_alive ? "keep-alive" : "close";
-                                    c.tx  = "HTTP/1.1 200 OK\r\n"
-                                            "Content-Type: text/plain\r\n"
-                                            "Content-Length: " + std::to_string(body.size()) + "\r\n"
-                                            "Connection: " + conn + "\r\n\r\n" + body;
-                                    fds[i].events |= POLLOUT;
-                                }
+                                CoreRequest req;
+                                req.conn_fd   = fds[i].fd;
+                                req.method    = c.method;
+                                req.target    = c.target;
+                                req.version   = c.version;
+                                req.keep_alive= c.keep_alive;
+                                req.body      = c.rx;        // c.rx enthält jetzt den vollständigen Body (de-chunkt oder per CL)
+                                req.headers   = c.headers;   // falls du sie schon füllst; sonst leer ok
+
+                                CoreResponse resp = http_handle(req); // <- später echtes Modul deines Kumpels
+
+                                c.keep_alive = resp.keep_alive; // Server-Core entscheidet final über close/keep-alive
+                                c.tx         = resp.raw;
+                                fds[i].events |= POLLOUT;
+                            }
                             }
                         }
 
