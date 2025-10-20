@@ -63,7 +63,7 @@ int main() {
     add_listener(8080);
     add_listener(8081);
  
-    const long IDLE_MS = 3000;
+    const long IDLE_MS = 15000;
     char buf[4096];
     std::cout << "Echo server with write-buffer on port 8080...\n";
 
