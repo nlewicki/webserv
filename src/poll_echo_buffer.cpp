@@ -16,6 +16,8 @@
 #include <unordered_map>
 #include <sstream>
 #include "http_bridge.hpp"
+#include "HTTPHandler.hpp"
+#include "Response.hpp"
 
 enum class RxState { READING_HEADERS, READING_BODY, READY };
 
@@ -263,6 +265,12 @@ int main() {
                     if (n > 0) {
                         Client &c = clients[i];
                         c.rx.append(buf, n);
+
+// ------ hier Leo sein Zeug rein
+
+
+
+// ------ aus raw string alles rausgeholt und in Request struct
                         c.last_active_ms = now_ms;
 
                         // === PHASE 1: Header empfangen (mit Limit) ===
@@ -281,7 +289,7 @@ int main() {
                                 if (!parse_head_min(head, H)) { err400(i, fds, clients); }
                                 else if (H.version != "HTTP/1.1" && H.version != "HTTP/1.0") { err505(i, fds, clients); }
                                 else {
-                                    c.method       = H.method;
+                                    c.method        = H.method;
                                     c.target       = H.target;
                                     c.version      = H.version;
                                     c.keep_alive   = H.keep_alive;
@@ -318,7 +326,7 @@ int main() {
                                 }
 
                                 // wenn READY -> Dummy-Response bauen (später an HTTP weiterreichen)
-                                if (c.state == RxState::READY && c.tx.empty()) {
+/* Leos Request sturct*/        if (c.state == RxState::READY && c.tx.empty()) {
                                 CoreRequest req;
                                 req.conn_fd   = fds[i].fd;
                                 req.method    = c.method;
@@ -327,8 +335,9 @@ int main() {
                                 req.keep_alive= c.keep_alive;
                                 req.body      = c.rx;        // c.rx enthält jetzt den vollständigen Body (de-chunkt oder per CL)
                                 req.headers   = c.headers;   // falls du sie schon füllst; sonst leer ok
-
-                                CoreResponse resp = http_handle(req); // <- später echtes Modul deines Kumpels
+                                ResponseHandler handler;
+                                Response res = handler.handleRequest(req);
+                                CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
 
                                 c.keep_alive = resp.keep_alive; // Server-Core entscheidet final über close/keep-alive
                                 c.tx         = resp.raw;
