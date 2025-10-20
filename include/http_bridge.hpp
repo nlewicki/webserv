@@ -3,11 +3,11 @@
 #include <unordered_map>
 
 struct CoreRequest {
-    int         conn_fd = -1;
+    int         conn_fd = -1; // -1 heist, keine verbindung
     std::string method;     // z. B. "GET"
     std::string target;     // z. B. "/"
     std::string version;    // "HTTP/1.1"
-    std::unordered_map<std::string,std::string> headers; // optional: füllst du später
+    std::unordered_map<std::string,std::string> headers; // optional maybe spaeter
     std::string body;       // de-chunkt / Content-Length vollständig
     bool        keep_alive = false; // aus Version+Header abgeleitet
 };
@@ -17,5 +17,5 @@ struct CoreResponse {
     bool        keep_alive = false; // ob Verbindung offen bleiben soll
 };
 
-// Dein Kumpel ersetzt diese Funktion später durch sein echtes HTTP-Modul.
+// leos part ersaetzt das
 CoreResponse http_handle(const CoreRequest& req);
