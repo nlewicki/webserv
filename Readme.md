@@ -15,3 +15,4 @@ Start of a webserver
 | 8️⃣     | CGI                                              |
 | 9️⃣     | Konfiguration (mehrere Server/Ports)             |
 | 🔟      | Error Pages, Stress Tests, Browserkompatibilität |
+test
