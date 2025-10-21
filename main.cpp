@@ -6,11 +6,12 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 09:14:33 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/21 09:15:20 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "config.hpp"
+#include "server.hpp"
 #include <iostream>
 
 void printConfig(const Config& config) {
