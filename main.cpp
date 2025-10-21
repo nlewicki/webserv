@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/20 13:15:37 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/21 09:14:33 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,7 +51,7 @@ void printConfig(const Config& config) {
 int main(int argc, char** argv) {
     Config config;
     try {
-        std::string filename = (argc > 1) ? argv[1] : "test.conf";
+        std::string filename = (argc > 1) ? argv[1] : "webserv.conf";
         config.parse(filename);
         printConfig(config);
     } catch (const std::runtime_error& e) {
@@ -61,6 +61,10 @@ int main(int argc, char** argv) {
         std::cerr << "Error: " << e.what() << " (Key 404 not found in error_pages)\n";
         return 1;
     }
+
+    //Start server with config
+    Server server;
+    server.run(config);
     return 0;
 }
 
