@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/20 13:29:46 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/21 08:47:09 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -66,12 +66,13 @@ void Config::parse(const std::string& filename) {
             }
             Context closedContext = contextStack.back();
             contextStack.pop_back();
-            if (!contextStack.empty() && closedContext == LOCATION) {
+            if (closedContext == LOCATION) {
                 currentLocation = nullptr;
-            } else if (!contextStack.empty() && closedContext == SERVER) {
-                currentServer = nullptr; // Setze nur, wenn der server-Block vollständig geschlossen wird
+                std::cerr << "Closed location block, context now: " << (contextStack.empty() ? "GLOBAL" : contextStack.back() == SERVER ? "SERVER" : "LOCATION") << std::endl;
+            } else if (closedContext == SERVER) {
+                currentServer = nullptr;
+                std::cerr << "Closed server block, context now: " << (contextStack.empty() ? "GLOBAL" : contextStack.back() == SERVER ? "SERVER" : "LOCATION") << std::endl;
             }
-            std::cerr << "Closed block, context now: " << (contextStack.empty() ? "GLOBAL" : contextStack.back() == SERVER ? "SERVER" : "LOCATION") << std::endl;
             continue;
         }
 
@@ -92,12 +93,11 @@ void Config::parse(const std::string& filename) {
             if (!currentServer) throw std::runtime_error("No current server on line " + std::to_string(lineNum));
             currentServer->locations.push_back(LocationConfig());
             currentLocation = &currentServer->locations.back();
-            // Extrahiere den Pfad vor dem {
             size_t pathEnd = line.find('{');
             currentLocation->path = trim(line.substr(8, pathEnd - 8)); // "location " hat 9 Zeichen
             contextStack.push_back(LOCATION);
             std::cerr << "Started location block: " << currentLocation->path << " on line " << lineNum << std::endl;
-            // Parse interne Direktiven sofort
+            // Parse interne Direktiven
             std::string nextLine;
             while (std::getline(file, nextLine) && trim(nextLine) != "}") {
                 lineNum++;
@@ -208,4 +208,3 @@ void Config::parse(const std::string& filename) {
         }
     }
 }
-
