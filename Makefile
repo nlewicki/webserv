@@ -1,4 +1,4 @@
-SRC = main.cpp config.cpp
+SRC = main.cpp config.cpp Server.cpp poll_echo_buffer.cpp HTTPHandler.cpp CGIHandler.cpp Response.cpp
 
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++17
