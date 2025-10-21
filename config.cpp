@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 08:47:09 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/21 09:11:26 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -206,5 +206,22 @@ void Config::parse(const std::string& filename) {
             if (locIt->error_pages.empty()) locIt->error_pages = it->error_pages;
             if (!locIt->autoindex) locIt->autoindex = false;  // Explicit setzen
         }
+    }
+
+    if (servers.empty()) {
+        // Default-Server, wenn keine Config
+        servers.push_back(ServerConfig());
+        currentServer = &servers.back();
+        currentServer->listen_host = "127.0.0.1";
+        currentServer->listen_port = 8080;
+        currentServer->server_name = "default";
+        currentServer->client_max_body_size = default_client_max_body_size;
+        LocationConfig defaultLoc;
+        defaultLoc.path = "/";
+        defaultLoc.root = "./";
+        defaultLoc.index = "index.html";
+        defaultLoc.autoindex = false;
+        defaultLoc.methods = {"GET", "POST", "DELETE"};
+        currentServer->locations.push_back(defaultLoc);
     }
 }
