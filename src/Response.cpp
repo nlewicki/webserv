@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Response.cpp                                       :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
+/*   Updated: 2025/10/21 09:27:32 by mhummel          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "Response.hpp"
 #include "CGIHandler.hpp"
 #include <fstream>
@@ -46,7 +58,7 @@ std::string ResponseHandler::readFile(const std::string& path)
 	std::ifstream file(path.c_str());
 	if (!file.is_open())
 		return "<h1>Error opening file</h1>";;
-	
+
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 	return buffer.str();

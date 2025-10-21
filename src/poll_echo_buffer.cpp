@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   poll_echo_buffer.cpp                               :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/10/21 09:27:29 by mhummel           #+#    #+#             */
+/*   Updated: 2025/10/21 09:27:30 by mhummel          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include <algorithm>
 #include <chrono>
 #include <csignal>
@@ -176,7 +188,7 @@ static int add_listener(uint16_t port) {
         perror("setsockopt"); ::close(s); return -1;
     }
 
-    sockaddr_in a{}; 
+    sockaddr_in a{};
     a.sin_family      = AF_INET;
     a.sin_addr.s_addr = htonl(INADDR_ANY);
     a.sin_port        = htons(port);
@@ -196,10 +208,10 @@ static int add_listener(uint16_t port) {
 
 int main() {
     signal(SIGPIPE, SIG_IGN);
-    
+
     add_listener(8080);
     add_listener(8081);
- 
+
     const long IDLE_MS = 15000;
     char buf[4096];
     std::cout << "Echo server with write-buffer on port 8080...\n";
@@ -249,7 +261,7 @@ int main() {
                 }
                 continue;
             }
-            
+
             if (fds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
                 close(fds[i].fd);
                 fds.erase(fds.begin() + i);
