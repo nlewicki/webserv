@@ -1,49 +1,30 @@
+NAME = webserv
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -Werror
+DBGFLAGS = -DDEBUG
+OBJDIR = obj
 
-CXX     := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Werror -O2 -Iinclude
-
-DBGFLAGS := -g -O0
-
-NAME := webserv
-
-SRC_DIR := src
-OBJ_DIR := obj
-
-SRCS := $(shell find $(SRC_DIR) -name '*.cpp')
-OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
-
-DEPFLAGS := -MMD -MP
-CXXFLAGS += $(DEPFLAGS)
-
-.PHONY: all debug clean fclean re run
+SRC = main.cpp config.cpp
+OBJ = $(addprefix $(OBJDIR)/, $(SRC:.cpp=.o))
 
 all: $(NAME)
 
+$(NAME): $(OBJ)
+	$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJ)
+
+$(OBJDIR)/%.o: %.cpp
+	@mkdir -p $(OBJDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 debug: CXXFLAGS += $(DBGFLAGS)
-debug: $(NAME)
-
-$(NAME): $(OBJS)
-	@$(CXX) $(CXXFLAGS) $(SANFLAGS) $^ -o $@
-	@echo "Linked -> $@"
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
-	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) $(SANFLAGS) -c $< -o $@
-	@echo "Compiled $<"
-
-
-$(OBJ_DIR):
-	@mkdir -p $(OBJ_DIR)
-
-run: $(NAME)
-	@./$(NAME)
+debug: re
 
 clean:
-	@rm -rf $(OBJ_DIR)
+	rm -rf $(OBJDIR)
 
 fclean: clean
-	@rm -f $(NAME)
+	rm -f $(NAME)
 
 re: fclean all
 
--include $(OBJS:.o=.d)
+.PHONY: all debug clean fclean re

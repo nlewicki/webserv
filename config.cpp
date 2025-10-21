@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 09:11:26 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/21 12:10:21 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ void Config::parse(const std::string& filename) {
     if (!file.is_open()) throw std::runtime_error("Cannot open config file: " + filename);
 
     std::vector<Context> contextStack;
-    contextStack.push_back(GLOBAL);
+    contextStack.push_back(GLOBAL); // Initialer GLOBAL-Kontext
     ServerConfig* currentServer = nullptr;
     LocationConfig* currentLocation = nullptr;
 
@@ -55,28 +55,43 @@ void Config::parse(const std::string& filename) {
     while (std::getline(file, line)) {
         lineNum++;
         line = trim(line);
-        std::cerr << "Parsing line " << lineNum << ": '" << line << "'" << std::endl; // Debugging mit Anführungszeichen
+        #ifdef DEBUG
+        std::cerr << "Parsing line " << lineNum << ": '" << line << "' (Stack size: " << contextStack.size() << ")" << std::endl; // Erweiterte Debugging
+        #endif
         if (line.empty() || line[0] == '#') continue;  // Ignoriere Kommentare und Leerzeilen
 
         // Handle Block-Ende
         if (line == "}") {
             if (contextStack.empty()) {
+                #ifdef DEBUG
                 std::cerr << "Warning: Extra } on line " << lineNum << ", ignoring" << std::endl;
+                #endif
                 continue;
             }
             Context closedContext = contextStack.back();
             contextStack.pop_back();
+            #ifdef DEBUG
+            std::cerr << "Popped " << (closedContext == LOCATION ? "LOCATION" : closedContext == SERVER ? "SERVER" : "GLOBAL") << ", Stack size now: " << contextStack.size() << std::endl;
+            #endif
             if (closedContext == LOCATION) {
                 currentLocation = nullptr;
-                std::cerr << "Closed location block, context now: " << (contextStack.empty() ? "GLOBAL" : contextStack.back() == SERVER ? "SERVER" : "LOCATION") << std::endl;
+                #ifdef DEBUG
+                std::cerr << "Closed location block, context now: " << (contextStack.empty() ? "GLOBAL" : contextStack.back() == SERVER ? "SERVER" : contextStack.back() == LOCATION ? "LOCATION" : "GLOBAL") << std::endl;
+                #endif
             } else if (closedContext == SERVER) {
                 currentServer = nullptr;
-                std::cerr << "Closed server block, context now: " << (contextStack.empty() ? "GLOBAL" : contextStack.back() == SERVER ? "SERVER" : "LOCATION") << std::endl;
+                #ifdef DEBUG
+                std::cerr << "Closed server block, context now: " << (contextStack.empty() ? "GLOBAL" : contextStack.back() == SERVER ? "SERVER" : contextStack.back() == LOCATION ? "LOCATION" : "GLOBAL") << std::endl;
+                #endif
+            } else if (closedContext == GLOBAL) {
+                #ifdef DEBUG
+                std::cerr << "Warning: Closing global context on line " << lineNum << ", ignoring" << std::endl;
+                #endif
             }
             continue;
         }
 
-        // Prüfe auf Block-Start (robuster mit Whitespaces)
+        // Prüfe auf Block-Start
         size_t serverPos = line.find("server");
         size_t openBracePos = line.find('{');
         if (serverPos != std::string::npos && openBracePos != std::string::npos && serverPos < openBracePos) {
@@ -86,24 +101,41 @@ void Config::parse(const std::string& filename) {
             servers.push_back(ServerConfig());
             currentServer = &servers.back();
             contextStack.push_back(SERVER);
-            std::cerr << "Started server block on line " << lineNum << std::endl;
+            #ifdef DEBUG
+            std::cerr << "Started server block on line " << lineNum << ", Stack size: " << contextStack.size() << std::endl;
+            #endif
             continue;
         } else if (line.find("location") == 0 && openBracePos != std::string::npos) {
-            if (contextStack.back() != SERVER) throw std::runtime_error("Location block not allowed in this context on line " + std::to_string(lineNum));
-            if (!currentServer) throw std::runtime_error("No current server on line " + std::to_string(lineNum));
+            if (contextStack.back() != SERVER) {
+                throw std::runtime_error("Location block not allowed in this context on line " + std::to_string(lineNum));
+            }
+            if (!currentServer) {
+                throw std::runtime_error("No current server on line " + std::to_string(lineNum));
+            }
             currentServer->locations.push_back(LocationConfig());
             currentLocation = &currentServer->locations.back();
             size_t pathEnd = line.find('{');
             currentLocation->path = trim(line.substr(8, pathEnd - 8)); // "location " hat 9 Zeichen
             contextStack.push_back(LOCATION);
-            std::cerr << "Started location block: " << currentLocation->path << " on line " << lineNum << std::endl;
+            #ifdef DEBUG
+            std::cerr << "Started location block: " << currentLocation->path << " on line " << lineNum << ", Stack size: " << contextStack.size() << std::endl;
+            #endif
             // Parse interne Direktiven
             std::string nextLine;
-            while (std::getline(file, nextLine) && trim(nextLine) != "}") {
+            while (std::getline(file, nextLine)) {
                 lineNum++;
                 nextLine = trim(nextLine);
-                std::cerr << "Parsing inner line " << lineNum << ": '" << nextLine << "'" << std::endl;
+                #ifdef DEBUG
+                std::cerr << "Parsing inner line " << lineNum << ": '" << nextLine << "' (Stack size: " << contextStack.size() << ")" << std::endl;
+                #endif
                 if (nextLine.empty() || nextLine[0] == '#') continue;
+                if (nextLine == "}") {
+                    contextStack.pop_back(); // Schließe den location-Kontext
+                    #ifdef DEBUG
+                    std::cerr << "Closed location block on line " << lineNum << ", Stack size: " << contextStack.size() << std::endl;
+                    #endif
+                    break;
+                }
                 size_t innerSemiPos = nextLine.find_last_of(';');
                 if (innerSemiPos == std::string::npos) {
                     throw std::runtime_error("Missing ; on line " + std::to_string(lineNum));
@@ -128,10 +160,6 @@ void Config::parse(const std::string& filename) {
                 } else {
                     throw std::runtime_error("Unknown directive: " + key + " on line " + std::to_string(lineNum));
                 }
-            }
-            if (trim(nextLine) == "}") {
-                lineNum++;
-                std::cerr << "Closed location block on line " << lineNum << std::endl;
             }
             continue;
         }
@@ -185,29 +213,33 @@ void Config::parse(const std::string& filename) {
         }
     }
 
-    // Toleranter Check für unbalancierte Blöcke
-    if (!contextStack.empty()) {
-        std::cerr << "Warning: Unbalanced blocks at end of file, assuming implicit closure" << std::endl;
+    // Überprüfe den Stack-Zustand am Ende
+    if (!contextStack.empty() && !(contextStack.size() == 1 && contextStack.back() == GLOBAL)) {
+        #ifdef DEBUG
+        std::cerr << "Warning: Unbalanced blocks at end of file, stack contains: ";
+        for (size_t i = 0; i < contextStack.size(); ++i) {
+            std::cerr << contextStack[i] << (i < contextStack.size() - 1 ? ", " : "\n");
+        }
+        std::cerr << "Assuming implicit closure" << std::endl;
+        #endif
         while (!contextStack.empty()) {
             contextStack.pop_back();
             if (currentLocation) currentLocation = nullptr;
             if (currentServer) currentServer = nullptr;
         }
+    } else {
+        if (!contextStack.empty()) {
+            contextStack.pop_back(); // Entferne den initialen GLOBAL-Kontext
+            #ifdef DEBUG
+            std::cerr << "Removed initial GLOBAL context, Stack size now: " << contextStack.size() << std::endl;
+            #endif
+        }
+        #ifdef DEBUG
+        std::cerr << "Stack is empty at end of file" << std::endl;
+        #endif
     }
 
     // Setze Defaults nach dem Parsen
-    for (std::vector<ServerConfig>::iterator it = servers.begin(); it != servers.end(); ++it) {
-        if (it->listen_port == 0) it->listen_port = 80;  // Default-Port
-        if (it->client_max_body_size == 0) it->client_max_body_size = default_client_max_body_size;
-        if (it->error_pages.empty()) it->error_pages = default_error_pages;
-        for (std::vector<LocationConfig>::iterator locIt = it->locations.begin(); locIt != it->locations.end(); ++locIt) {
-            if (locIt->index.empty()) locIt->index = "index.html";
-            if (locIt->methods.empty()) locIt->methods.push_back("GET"), locIt->methods.push_back("POST"), locIt->methods.push_back("DELETE");
-            if (locIt->error_pages.empty()) locIt->error_pages = it->error_pages;
-            if (!locIt->autoindex) locIt->autoindex = false;  // Explicit setzen
-        }
-    }
-
     if (servers.empty()) {
         // Default-Server, wenn keine Config
         servers.push_back(ServerConfig());
@@ -224,4 +256,16 @@ void Config::parse(const std::string& filename) {
         defaultLoc.methods = {"GET", "POST", "DELETE"};
         currentServer->locations.push_back(defaultLoc);
     }
+    for (std::vector<ServerConfig>::iterator it = servers.begin(); it != servers.end(); ++it) {
+        if (it->listen_port == 0) it->listen_port = 80;  // Default-Port
+        if (it->client_max_body_size == 0) it->client_max_body_size = default_client_max_body_size;
+        if (it->error_pages.empty()) it->error_pages = default_error_pages;
+        for (std::vector<LocationConfig>::iterator locIt = it->locations.begin(); locIt != it->locations.end(); ++locIt) {
+            if (locIt->index.empty()) locIt->index = "index.html";
+            if (locIt->methods.empty()) locIt->methods.push_back("GET"), locIt->methods.push_back("POST"), locIt->methods.push_back("DELETE");
+            if (locIt->error_pages.empty()) locIt->error_pages = it->error_pages;
+            if (!locIt->autoindex) locIt->autoindex = false;  // Explicit setzen
+        }
+    }
 }
+
