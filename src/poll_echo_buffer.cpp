@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:29 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 12:32:21 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 12:34:51 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -296,7 +296,6 @@ int main() {
                             req.path      = c.target;
                             req.version   = c.version;
                             req.keep_alive= c.keep_alive;
-                            req.body      = c.rx;        // c.rx enthält jetzt den vollständigen Body (de-chunkt oder per CL)
                             ResponseHandler handler;
                             
                             Response res = handler.handleRequest(req);
