@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 11:42:18 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 11:51:21 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -131,7 +131,7 @@ Response ResponseHandler::handleRequest(const Request& req)
 		res.reasonPhrase = getStatusMessage(405);
         res.body = "<h1>405 Method Not Allowed</h1>";
 	}
-
+	std::cout << res.toString() << std::endl;
 	res.headers ["Content-Length"] = std::to_string(res.body.size());
 	return res;
 }

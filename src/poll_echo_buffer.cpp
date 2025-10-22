@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:29 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 11:41:41 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 11:53:03 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -212,7 +212,7 @@ int main() {
     add_listener(8080);
     add_listener(8081);
 
-    const long IDLE_MS = 15000;
+    const long IDLE_MS = 15000000000;
     char buf[4096];
     std::cout << "Echo server with write-buffer on port 8080...\n";
 
@@ -336,7 +336,7 @@ int main() {
                                         c.state = RxState::READY; // kein Body erwartet
                                     }
                                 }
-
+                                
                                 // wenn READY -> Dummy-Response bauen (später an HTTP weiterreichen)
 /* Leos Request sturct*/        if (c.state == RxState::READY && c.tx.empty()) {
                                 Request req;
