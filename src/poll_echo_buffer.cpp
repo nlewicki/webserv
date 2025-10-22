@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:29 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 13:47:27 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 13:59:15 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -377,7 +377,7 @@ int main() {
                             //CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
 
                             c.keep_alive = res.keep_alive; // Server-Core entscheidet final über close/keep-alive
-                            // c.tx         = res.raw;
+                            c.tx         = res.toString();
                             fds[i].events |= POLLOUT;
                         }
                         
