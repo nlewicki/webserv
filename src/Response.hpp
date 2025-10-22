@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:34 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 11:39:58 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 13:38:43 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,7 +34,7 @@ class ResponseHandler
 		ResponseHandler();
 		~ResponseHandler();
 
-		Response handleRequest(const Request& req);
+		Response handleRequest(const Request& req, const LocationConfig& config);
 
 	private:
 		std::string getStatusMessage(int code);

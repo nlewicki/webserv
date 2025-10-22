@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:29 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 13:06:41 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 13:47:27 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@
 #include "http_bridge.hpp"
 #include "HTTPHandler.hpp"
 #include "Response.hpp"
+#include "config.hpp"
 
 enum class RxState { READING_HEADERS, READING_BODY, READY };
 
@@ -351,7 +352,10 @@ int main() {
                             c.state = RxState::READY; // Für dieses Beispiel direkt READY setzen
                         }
 
-                        
+                        LocationConfig config;
+                        Config temp;
+                        temp.parse("./config/webserv.conf");
+                        config = temp.servers[0].locations[0];
                         Request req;
                         req = RequestParser().parse(c.rx);
                         c.state = RxState::READY;
@@ -369,7 +373,7 @@ int main() {
                             
                             ResponseHandler handler;
                             printf("method: %s, path: %s\n", req.method.c_str(), req.path.c_str());
-                            Response res = handler.handleRequest(req);
+                            Response res = handler.handleRequest(req, config);
                             //CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
 
                             c.keep_alive = res.keep_alive; // Server-Core entscheidet final über close/keep-alive
