@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:14 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 09:27:15 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/21 09:40:37 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <sstream>
 #include <iostream>
+#include <string.h>
 
 CGIHandler::CGIHandler() {}
 CGIHandler::~CGIHandler() {}

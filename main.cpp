@@ -6,12 +6,12 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 09:15:20 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/21 10:52:41 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "config.hpp"
-#include "server.hpp"
+// #include "src/Server.hpp"
 #include <iostream>
 
 void printConfig(const Config& config) {
@@ -41,8 +41,11 @@ void printConfig(const Config& config) {
                 std::cout << loc.methods[k] << (k < loc.methods.size() - 1 ? ", " : "\n");
             }
             std::cout << "      CGI: ";
+            bool first = true;
             for (std::map<std::string, std::string>::const_iterator it = loc.cgi.begin(); it != loc.cgi.end(); ++it) {
-                std::cout << it->first << " -> " << it->second << " ";
+                if (!first) std::cout << ", ";
+                std::cout << it->first << " -> " << it->second;
+                first = false;
             }
             std::cout << "\n";
         }
@@ -63,9 +66,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    //Start server with config
-    Server server;
-    server.run(config);
+    // //Start server with config
+    // Server server;
+    // server.run(config);
     return 0;
 }
 
