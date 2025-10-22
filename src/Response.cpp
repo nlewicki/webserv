@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 11:51:21 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 13:09:11 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,11 +78,12 @@ Response ResponseHandler::handleRequest(const Request& req)
 	
 	// default headers
 	res.headers["Server"] = "webserv/1.0";
-    res.headers["Connection"] = "close";
+    // res.headers["Connection"] = "close";
     res.headers["Content-Type"] = "text/html";
 
 	std::string path = "." + req.path;
 
+	printf("path: %s\n", path.c_str());
 	if (isCGIRequest(req.path))
 	{
 		CGIHandler cgi;

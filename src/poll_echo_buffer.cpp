@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:29 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 12:34:51 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 13:06:41 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -138,35 +138,35 @@ inline void err505(size_t i, std::vector<pollfd>& fds, std::vector<Client>& clie
 
 // verarbeitet so viel wie möglich in-place: aus c.rx konsumieren, de-chunked nach 'out' schieben.
 // gibt true zurück, wenn Fortschritt; false, wenn mehr Daten benötigt werden.
-static bool dechunk_step(Client& c, std::string& out) {
-    using CS = Client::ChunkState;
-    for(;;){
-        if (c.ch_state == CS::SIZE) {
-            auto p = c.rx.find("\r\n");
-            if (p == std::string::npos) return false;
-            std::string line = c.rx.substr(0, p);
-            c.rx.erase(0, p+2);
-            // hex size; optional chunk extensions ignorieren
-            auto semi = line.find(';');
-            std::string hex = (semi==std::string::npos)? line : line.substr(0,semi);
-            c.ch_need = std::strtoull(hex.c_str(), nullptr, 16);
-            c.ch_state = (c.ch_need==0) ? CS::CRLF_AFTER_DATA : CS::DATA;
-        }
-        if (c.ch_state == CS::DATA) {
-            if (c.rx.size() < c.ch_need) return false;
-            out.append(c.rx.data(), c.ch_need);
-            c.rx.erase(0, c.ch_need);
-            c.ch_state = CS::CRLF_AFTER_DATA;
-        }
-        if (c.ch_state == CS::CRLF_AFTER_DATA) {
-            if (c.rx.size() < 2) return false;
-            if (c.rx.compare(0,2,"\r\n") != 0) return false; // malformed
-            c.rx.erase(0,2);
-            if (c.ch_need == 0) { c.ch_state = CS::DONE; return true; }
-            c.ch_state = CS::SIZE;
-        }
-    }
-}
+// static bool dechunk_step(Client& c, std::string& out) {
+//     using CS = Client::ChunkState;
+//     for(;;){
+//         if (c.ch_state == CS::SIZE) {
+//             auto p = c.rx.find("\r\n");
+//             if (p == std::string::npos) return false;
+//             std::string line = c.rx.substr(0, p);
+//             c.rx.erase(0, p+2);
+//             // hex size; optional chunk extensions ignorieren
+//             auto semi = line.find(';');
+//             std::string hex = (semi==std::string::npos)? line : line.substr(0,semi);
+//             c.ch_need = std::strtoull(hex.c_str(), nullptr, 16);
+//             c.ch_state = (c.ch_need==0) ? CS::CRLF_AFTER_DATA : CS::DATA;
+//         }
+//         if (c.ch_state == CS::DATA) {
+//             if (c.rx.size() < c.ch_need) return false;
+//             out.append(c.rx.data(), c.ch_need);
+//             c.rx.erase(0, c.ch_need);
+//             c.ch_state = CS::CRLF_AFTER_DATA;
+//         }
+//         if (c.ch_state == CS::CRLF_AFTER_DATA) {
+//             if (c.rx.size() < 2) return false;
+//             if (c.rx.compare(0,2,"\r\n") != 0) return false; // malformed
+//             c.rx.erase(0,2);
+//             if (c.ch_need == 0) { c.ch_state = CS::DONE; return true; }
+//             c.ch_state = CS::SIZE;
+//         }
+//     }
+// }
 
 static void reset_for_next_request(Client& c){
     c.tx.clear();
@@ -283,12 +283,82 @@ int main() {
 
 
 // ------ aus raw string alles rausgeholt und in Request struct
+
+                        // Header komplett?
+                        if (c.rx.find("\r\n\r\n") != std::string::npos)
+                        {
+                            // Header komplett da
+                            size_t header_end = c.rx.find("\r\n\r\n") + 4;
+                            std::string header_str = c.rx.substr(0, header_end);
+                            std::istringstream header_stream(header_str);
+                            std::string line;
+
+                            // Erste Zeile: Methode, Pfad, Version
+                            if (std::getline(header_stream, line))
+                            {
+                                if (!line.empty() && line.back() == '\r')
+                                    line.pop_back();
+                                std::istringstream line_ss(line);
+                                line_ss >> c.method >> c.target >> c.version;
+                            }
+
+                            // Header-Zeilen
+                            while (std::getline(header_stream, line))
+                            {
+                                if (!line.empty() && line.back() == '\r')
+                                    line.pop_back();
+                                if (line.empty())
+                                    break;
+                                size_t pos = line.find(':');
+                                if (pos != std::string::npos)
+                                {
+                                    std::string key = line.substr(0, pos);
+                                    std::string value = line.substr(pos + 1);
+                                    if (!value.empty() && value[0] == ' ')
+                                        value.erase(0, 1);
+                                    c.headers[key] = value;
+                                }
+                            }
+
+                            // Keep-Alive bestimmen
+                            if (c.version == "HTTP/1.1")
+                            {
+                                c.keep_alive = !(c.headers.count("Connection") && c.headers["Connection"] == "close");
+                            }
+                            else if (c.version == "HTTP/1.0")
+                            {
+                                c.keep_alive = (c.headers.count("Connection") && c.headers["Connection"] == "keep-alive");
+                            }
+                            else
+                            {
+                                // Ungültige Version
+                                err505(i, fds, clients);
+                                break;
+                            }
+
+                            // Body-Handling vorbereiten
+                            if (c.headers.count("Transfer-Encoding") && c.headers["Transfer-Encoding"] == "chunked")
+                            {
+                                c.is_chunked = true;
+                            }
+                            else if (c.headers.count("Content-Length"))
+                            {
+                                c.content_len = std::stoul(c.headers["Content-Length"]);
+                            }
+
+                            // Body-Teil aus rx entfernen
+                            c.rx.erase(0, header_end);
+                            c.state = RxState::READY; // Für dieses Beispiel direkt READY setzen
+                        }
+
+                        
                         Request req;
                         req = RequestParser().parse(c.rx);
+                        c.state = RxState::READY;
                         c.last_active_ms = now_ms;
 
                         
-                                // wenn READY -> Dummy-Response bauen (später an HTTP weiterreichen)
+                        // wenn READY -> Dummy-Response bauen (später an HTTP weiterreichen)
                         if (c.state == RxState::READY && c.tx.empty())
                         {
                             req.conn_fd   = fds[i].fd;
@@ -296,8 +366,9 @@ int main() {
                             req.path      = c.target;
                             req.version   = c.version;
                             req.keep_alive= c.keep_alive;
-                            ResponseHandler handler;
                             
+                            ResponseHandler handler;
+                            printf("method: %s, path: %s\n", req.method.c_str(), req.path.c_str());
                             Response res = handler.handleRequest(req);
                             //CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
 
@@ -306,45 +377,6 @@ int main() {
                             fds[i].events |= POLLOUT;
                         }
                         
-
-                        // === PHASE 2: Body empfangen ===
-                        if (clients[i].state == RxState::READING_BODY) {
-                            Client &c2 = clients[i];
-
-                            if (c2.is_chunked) {
-                                std::string out;
-                                bool progressed = true;
-                                while (progressed && c2.ch_state != Client::ChunkState::DONE) {
-                                    progressed = dechunk_step(c2, out);
-                                    if (!out.empty()) {
-                                        if (c2.body_rcvd + out.size() > c2.max_body_bytes) { err413(i, fds, clients); break; }
-                                        c2.body_rcvd += out.size();
-                                    }
-                                }
-                                if (!out.empty()) c2.rx.append(out); // rx sammelt den dechunkten Body
-                                if (c2.ch_state == Client::ChunkState::DONE) {
-                                    c2.state = RxState::READY;
-                                }
-                            } else {
-                                // Content-Length
-                                if (c2.rx.size() > c2.max_body_bytes) { err413(i, fds, clients); }
-                                c2.body_rcvd = c2.rx.size();
-                                if (c2.body_rcvd >= c2.content_len) {
-                                    c2.state = RxState::READY;
-                                }
-                            }
-
-                            if (clients[i].state == RxState::READY && clients[i].tx.empty()) {
-                                static const std::string body = "Hello world!";
-                                std::string conn = clients[i].keep_alive ? "keep-alive" : "close";
-                                clients[i].tx  = "HTTP/1.1 200 OK\r\n"
-                                                "Content-Type: text/plain\r\n"
-                                                "Content-Length: " + std::to_string(body.size()) + "\r\n"
-                                                "Connection: " + conn + "\r\n\r\n" + body;
-                                fds[i].events |= POLLOUT;
-                            }
-                        }
-
                         continue; // weiter lesen, falls Kernel noch mehr hat
                     } else if (n == 0) {
                         ::close(fds[i].fd);
