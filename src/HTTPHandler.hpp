@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   HTTPHandler.hpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
+/*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:24 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 09:27:25 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/22 11:33:52 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,11 @@
 
 struct Request
 {
+	// Verbindungsdaten
+	bool keep_alive = false; // aus Version+Header abgeleitet
+	int conn_fd = -1; // -1 heist, keine verbindung
+	
+	// Request-Daten
 	std::string method;
 	std::string path;
 	std::string version;

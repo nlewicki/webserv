@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   poll_echo_buffer.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
+/*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:29 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 09:27:30 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/22 11:41:41 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,7 +57,7 @@ struct Client {
     long last_active_ms = 0;
 
     std::string method, target, version;
-    std::unordered_map<std::string,std::string> headers; // optional, später füllen
+    std::map<std::string,std::string> headers; // optional, später füllen
     bool keep_alive = false;
 
     // Chunked-Decoder-Context
@@ -339,20 +339,21 @@ int main() {
 
                                 // wenn READY -> Dummy-Response bauen (später an HTTP weiterreichen)
 /* Leos Request sturct*/        if (c.state == RxState::READY && c.tx.empty()) {
-                                CoreRequest req;
+                                Request req;
                                 req.conn_fd   = fds[i].fd;
                                 req.method    = c.method;
-                                req.target    = c.target;
+                                req.path      = c.target;
                                 req.version   = c.version;
                                 req.keep_alive= c.keep_alive;
                                 req.body      = c.rx;        // c.rx enthält jetzt den vollständigen Body (de-chunkt oder per CL)
                                 req.headers   = c.headers;   // falls du sie schon füllst; sonst leer ok
                                 ResponseHandler handler;
+                                
                                 Response res = handler.handleRequest(req);
-                                CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
+                                //CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
 
-                                c.keep_alive = resp.keep_alive; // Server-Core entscheidet final über close/keep-alive
-                                c.tx         = resp.raw;
+                                c.keep_alive = res.keep_alive; // Server-Core entscheidet final über close/keep-alive
+                                // c.tx         = res.raw;
                                 fds[i].events |= POLLOUT;
                             }
                             }

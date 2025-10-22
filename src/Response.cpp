@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Response.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
+/*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 09:27:32 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/22 11:42:18 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,6 +74,8 @@ Response ResponseHandler::handleRequest(const Request& req)
 {
 	Response res;
 
+	res.keep_alive = req.keep_alive;
+	
 	// default headers
 	res.headers["Server"] = "webserv/1.0";
     res.headers["Connection"] = "close";
