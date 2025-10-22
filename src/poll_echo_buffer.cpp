@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:29 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 11:53:03 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 12:32:21 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,47 +80,47 @@ static std::vector<pollfd>     fds;
 static std::unordered_set<int> listener_fds;
 static std::vector<Client>     clients;
 
-static std::string lcase(std::string s){ for(char&c: s) c = std::tolower((unsigned char)c); return s; }
-static std::string trim(const std::string& s){
-    const char* ws = " \t\r\n";
-    auto a = s.find_first_not_of(ws); if (a==std::string::npos) return "";
-    auto b = s.find_last_not_of(ws);  return s.substr(a, b-a+1);
-}
+// static std::string lcase(std::string s){ for(char&c: s) c = std::tolower((unsigned char)c); return s; }
+// static std::string trim(const std::string& s){
+//     const char* ws = " \t\r\n";
+//     auto a = s.find_first_not_of(ws); if (a==std::string::npos) return "";
+//     auto b = s.find_last_not_of(ws);  return s.substr(a, b-a+1);
+// }
 
-static bool parse_head_min(const std::string& head, HeadInfo& out){
-    // Startzeile
-    auto eol = head.find("\r\n"); if (eol==std::string::npos) return false;
-    std::istringstream iss(head.substr(0, eol));
-    if (!(iss >> out.method >> out.target >> out.version)) return false;
+// static bool parse_head_min(const std::string& head, HeadInfo& out){
+//     // Startzeile
+//     auto eol = head.find("\r\n"); if (eol==std::string::npos) return false;
+//     std::istringstream iss(head.substr(0, eol));
+//     if (!(iss >> out.method >> out.target >> out.version)) return false;
 
-    // Header
-    std::unordered_map<std::string,std::string> H;
-    size_t pos = eol + 2;
-    while (pos < head.size()) {
-        size_t next = head.find("\r\n", pos); if (next==std::string::npos) break;
-        std::string line = head.substr(pos, next-pos); pos = next + 2;
-        if (line.empty()) break;
-        auto c = line.find(':'); if (c==std::string::npos) return false;
-        std::string name = lcase(trim(line.substr(0,c)));
-        std::string val  = trim(line.substr(c+1));
-        H[name] = val;
-    }
+//     // Header
+//     std::unordered_map<std::string,std::string> H;
+//     size_t pos = eol + 2;
+//     while (pos < head.size()) {
+//         size_t next = head.find("\r\n", pos); if (next==std::string::npos) break;
+//         std::string line = head.substr(pos, next-pos); pos = next + 2;
+//         if (line.empty()) break;
+//         auto c = line.find(':'); if (c==std::string::npos) return false;
+//         std::string name = lcase(trim(line.substr(0,c)));
+//         std::string val  = trim(line.substr(c+1));
+//         H[name] = val;
+//     }
 
-    // keep-alive
-    if (out.version == "HTTP/1.1") {
-        out.keep_alive = !(H.count("connection") && lcase(H["connection"])=="close");
-    } else if (out.version == "HTTP/1.0") {
-        out.keep_alive = (H.count("connection") && lcase(H["connection"])=="keep-alive");
-    } else {
-        out.keep_alive = false; // später ggf. 505
-    }
+//     // keep-alive
+//     if (out.version == "HTTP/1.1") {
+//         out.keep_alive = !(H.count("connection") && lcase(H["connection"])=="close");
+//     } else if (out.version == "HTTP/1.0") {
+//         out.keep_alive = (H.count("connection") && lcase(H["connection"])=="keep-alive");
+//     } else {
+//         out.keep_alive = false; // später ggf. 505
+//     }
 
-    // body semantics
-    out.is_chunked = (H.count("transfer-encoding") && lcase(H["transfer-encoding"]).find("chunked")!=std::string::npos);
-    if (H.count("content-length")) out.content_length = std::strtoull(H["content-length"].c_str(), nullptr, 10);
+//     // body semantics
+//     out.is_chunked = (H.count("transfer-encoding") && lcase(H["transfer-encoding"]).find("chunked")!=std::string::npos);
+//     if (H.count("content-length")) out.content_length = std::strtoull(H["content-length"].c_str(), nullptr, 10);
 
-    return true;
-}
+//     return true;
+// }
 
 static void send_error_and_close(size_t i, int code, const std::string& text,
                                  std::vector<pollfd>& fds, std::vector<Client>& clients) {
@@ -283,81 +283,30 @@ int main() {
 
 
 // ------ aus raw string alles rausgeholt und in Request struct
+                        Request req;
+                        req = RequestParser().parse(c.rx);
                         c.last_active_ms = now_ms;
 
-                        // === PHASE 1: Header empfangen (mit Limit) ===
-                        if (c.state == RxState::READING_HEADERS) {
-                            size_t hdr_end = c.rx.find("\r\n\r\n");
-                            if (hdr_end == std::string::npos) {
-                                if (c.rx.size() > c.max_header_bytes) { err413(i, fds, clients); }
-                                // sonst mehr Daten abwarten
-                            } else {
-                                // header extrahieren
-                                std::string head = c.rx.substr(0, hdr_end);
-                                c.rx.erase(0, hdr_end + 4);
-                                c.header_done = true;
-
-                                HeadInfo H{};
-                                if (!parse_head_min(head, H)) { err400(i, fds, clients); }
-                                else if (H.version != "HTTP/1.1" && H.version != "HTTP/1.0") { err505(i, fds, clients); }
-                                else {
-                                    c.method        = H.method;
-                                    c.target       = H.target;
-                                    c.version      = H.version;
-                                    c.keep_alive   = H.keep_alive;
-                                    c.is_chunked   = H.is_chunked;
-                                    c.content_len  = H.content_length;
-                                    c.body_rcvd    = c.rx.size(); // was vom Body evtl. schon da ist
-
-                                    if (c.is_chunked) {
-                                        c.state = RxState::READING_BODY;
-                                        // sofort versuchen, vorhandene Bytes zu de-chunken
-                                        std::string out;
-                                        bool progressed = true;
-                                        while (progressed && c.ch_state != Client::ChunkState::DONE) {
-                                            progressed = dechunk_step(c, out);
-                                            if (!out.empty()) {
-                                                if (c.body_rcvd + out.size() > c.max_body_bytes) { err413(i, fds, clients); break; }
-                                                c.body_rcvd += out.size();
-                                            }
-                                        }
-                                        // out enthält de-chunkte Daten, c.rx hält evtl. unvollständigen Rest
-                                        // Du kannst 'out' als finalen Body-Puffer speichern; hier reuse c.rx:
-                                        if (!out.empty()) {
-                                            c.rx.swap(out); // jetzt ist rx = dechunktes Stück; Rest bleibt intern im Decoder
-                                        }
-                                        if (c.ch_state == Client::ChunkState::DONE) {
-                                            c.state = RxState::READY;
-                                        }
-                                    } else if (c.content_len > 0) {
-                                        if (c.body_rcvd > c.max_body_bytes || c.content_len > c.max_body_bytes) { err413(i, fds, clients); }
-                                        c.state = (c.body_rcvd >= c.content_len) ? RxState::READY : RxState::READING_BODY;
-                                    } else {
-                                        c.state = RxState::READY; // kein Body erwartet
-                                    }
-                                }
-                                
+                        
                                 // wenn READY -> Dummy-Response bauen (später an HTTP weiterreichen)
-/* Leos Request sturct*/        if (c.state == RxState::READY && c.tx.empty()) {
-                                Request req;
-                                req.conn_fd   = fds[i].fd;
-                                req.method    = c.method;
-                                req.path      = c.target;
-                                req.version   = c.version;
-                                req.keep_alive= c.keep_alive;
-                                req.body      = c.rx;        // c.rx enthält jetzt den vollständigen Body (de-chunkt oder per CL)
-                                req.headers   = c.headers;   // falls du sie schon füllst; sonst leer ok
-                                ResponseHandler handler;
-                                
-                                Response res = handler.handleRequest(req);
-                                //CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
+                        if (c.state == RxState::READY && c.tx.empty())
+                        {
+                            req.conn_fd   = fds[i].fd;
+                            req.method    = c.method;
+                            req.path      = c.target;
+                            req.version   = c.version;
+                            req.keep_alive= c.keep_alive;
+                            req.body      = c.rx;        // c.rx enthält jetzt den vollständigen Body (de-chunkt oder per CL)
+                            ResponseHandler handler;
+                            
+                            Response res = handler.handleRequest(req);
+                            //CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
 
-                                c.keep_alive = res.keep_alive; // Server-Core entscheidet final über close/keep-alive
-                                // c.tx         = res.raw;
-                                fds[i].events |= POLLOUT;
-                            }
-                            }
+                            c.keep_alive = res.keep_alive; // Server-Core entscheidet final über close/keep-alive
+                            // c.tx         = res.raw;
+                            fds[i].events |= POLLOUT;
                         }
+                        
 
                         // === PHASE 2: Body empfangen ===
                         if (clients[i].state == RxState::READING_BODY) {
