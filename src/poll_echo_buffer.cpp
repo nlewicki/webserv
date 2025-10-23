@@ -352,6 +352,8 @@ int main() {
                             c.state = RxState::READY; // Für dieses Beispiel direkt READY setzen
                         }
 
+
+                        // manus teil --------
                         LocationConfig config;
                         Config temp;
                         temp.parse("./config/webserv.conf");
@@ -362,7 +364,7 @@ int main() {
                         c.last_active_ms = now_ms;
 
                         
-                        // wenn READY -> Dummy-Response bauen (später an HTTP weiterreichen)
+                
                         if (c.state == RxState::READY && c.tx.empty())
                         {
                             req.conn_fd   = fds[i].fd;
