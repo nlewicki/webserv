@@ -338,62 +338,25 @@ int main() {
                                 }
                                 
                                 // wenn READY -> Dummy-Response bauen (später an HTTP weiterreichen)
-/* Leos Request sturct*/        if (c.state == RxState::READY && c.tx.empty()) {
-                                Request req;
-                                req.conn_fd   = fds[i].fd;
-                                req.method    = c.method;
-                                req.path      = c.target;
-                                req.version   = c.version;
-                                req.keep_alive= c.keep_alive;
-                                req.body      = c.rx;        // c.rx enthält jetzt den vollständigen Body (de-chunkt oder per CL)
-                                req.headers   = c.headers;   // falls du sie schon füllst; sonst leer ok
-                                ResponseHandler handler;
-                                
-                                Response res = handler.handleRequest(req);
-                                //CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
+/* Leos Request sturct*/        if (c.state == RxState::READY && c.tx.empty()) 
+                                {
+                                    Request req;
+                                    req.conn_fd   = fds[i].fd;
+                                    req.method    = c.method;
+                                    req.path      = c.target;
+                                    req.version   = c.version;
+                                    req.keep_alive= c.keep_alive;
+                                    req.body      = c.rx;        // c.rx enthält jetzt den vollständigen Body (de-chunkt oder per CL)
+                                    req.headers   = c.headers;   // falls du sie schon füllst; sonst leer ok
+                                    ResponseHandler handler;
+                                    
+                                    Response res = handler.handleRequest(req);
+                                    //CoreResponse resp =  RequestParser.parse(req); // <- später echtes Modul deines Kumpels
 
-                                c.keep_alive = res.keep_alive; // Server-Core entscheidet final über close/keep-alive
-                                // c.tx         = res.raw;
-                                fds[i].events |= POLLOUT;
-                            }
-                            }
-                        }
-
-                        // === PHASE 2: Body empfangen ===
-                        if (clients[i].state == RxState::READING_BODY) {
-                            Client &c2 = clients[i];
-
-                            if (c2.is_chunked) {
-                                std::string out;
-                                bool progressed = true;
-                                while (progressed && c2.ch_state != Client::ChunkState::DONE) {
-                                    progressed = dechunk_step(c2, out);
-                                    if (!out.empty()) {
-                                        if (c2.body_rcvd + out.size() > c2.max_body_bytes) { err413(i, fds, clients); break; }
-                                        c2.body_rcvd += out.size();
-                                    }
+                                    c.keep_alive = res.keep_alive; // Server-Core entscheidet final über close/keep-alive
+                                    // c.tx         = res.raw;
+                                    fds[i].events |= POLLOUT;
                                 }
-                                if (!out.empty()) c2.rx.append(out); // rx sammelt den dechunkten Body
-                                if (c2.ch_state == Client::ChunkState::DONE) {
-                                    c2.state = RxState::READY;
-                                }
-                            } else {
-                                // Content-Length
-                                if (c2.rx.size() > c2.max_body_bytes) { err413(i, fds, clients); }
-                                c2.body_rcvd = c2.rx.size();
-                                if (c2.body_rcvd >= c2.content_len) {
-                                    c2.state = RxState::READY;
-                                }
-                            }
-
-                            if (clients[i].state == RxState::READY && clients[i].tx.empty()) {
-                                static const std::string body = "Hello world!";
-                                std::string conn = clients[i].keep_alive ? "keep-alive" : "close";
-                                clients[i].tx  = "HTTP/1.1 200 OK\r\n"
-                                                "Content-Type: text/plain\r\n"
-                                                "Content-Length: " + std::to_string(body.size()) + "\r\n"
-                                                "Connection: " + conn + "\r\n\r\n" + body;
-                                fds[i].events |= POLLOUT;
                             }
                         }
 
