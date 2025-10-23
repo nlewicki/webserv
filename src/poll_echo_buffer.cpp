@@ -93,7 +93,6 @@ static std::vector<Client>     clients;
 //     auto eol = head.find("\r\n"); if (eol==std::string::npos) return false;
 //     std::istringstream iss(head.substr(0, eol));
 //     if (!(iss >> out.method >> out.target >> out.version)) return false;
-
 //     // Header
 //     std::unordered_map<std::string,std::string> H;
 //     size_t pos = eol + 2;
@@ -106,7 +105,6 @@ static std::vector<Client>     clients;
 //         std::string val  = trim(line.substr(c+1));
 //         H[name] = val;
 //     }
-
 //     // keep-alive
 //     if (out.version == "HTTP/1.1") {
 //         out.keep_alive = !(H.count("connection") && lcase(H["connection"])=="close");
@@ -115,11 +113,9 @@ static std::vector<Client>     clients;
 //     } else {
 //         out.keep_alive = false; // später ggf. 505
 //     }
-
 //     // body semantics
 //     out.is_chunked = (H.count("transfer-encoding") && lcase(H["transfer-encoding"]).find("chunked")!=std::string::npos);
 //     if (H.count("content-length")) out.content_length = std::strtoull(H["content-length"].c_str(), nullptr, 10);
-
 //     return true;
 // }
 
@@ -207,6 +203,17 @@ static int add_listener(uint16_t port) {
     return s;
 }
 
+
+
+
+
+
+
+
+
+
+
+
 int main() {
     signal(SIGPIPE, SIG_IGN);
 
@@ -280,9 +287,6 @@ int main() {
                         c.rx.append(buf, n);
 
 // ------ hier Leo sein Zeug rein
-
-
-
 // ------ aus raw string alles rausgeholt und in Request struct
 
                         // Header komplett?
@@ -347,23 +351,23 @@ int main() {
                                 c.content_len = std::stoul(c.headers["Content-Length"]);
                             }
 
-                            // Body-Teil aus rx entfernen
-                            c.rx.erase(0, header_end);
+                            // Body-Teil aus rx entfernen ----- evtl logic fehler weil der im rx bleiben sollte
+                            // c.rx.erase(0, header_end);
                             c.state = RxState::READY; // Für dieses Beispiel direkt READY setzen
                         }
 
 
-                        // manus teil --------
+                        // manus teil -------- darf hier aber nicht sein, sonst wird bei jeder anfrage neu geparsed
                         LocationConfig config;
                         Config temp;
                         temp.parse("./config/webserv.conf");
                         config = temp.servers[0].locations[0];
+
+
                         Request req;
                         req = RequestParser().parse(c.rx);
                         c.state = RxState::READY;
                         c.last_active_ms = now_ms;
-
-                        
                 
                         if (c.state == RxState::READY && c.tx.empty())
                         {
@@ -383,6 +387,9 @@ int main() {
                             fds[i].events |= POLLOUT;
                         }
                         
+
+// alles mehr oder weniger leo
+
                         continue; // weiter lesen, falls Kernel noch mehr hat
                     } else if (n == 0) {
                         ::close(fds[i].fd);
