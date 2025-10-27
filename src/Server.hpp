@@ -6,7 +6,7 @@
 /*   By: nicolewicki <nicolewicki@student.42.fr>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:38 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/27 10:07:46 by nicolewicki      ###   ########.fr       */
+/*   Updated: 2025/10/27 10:24:15 by nicolewicki      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,7 +38,8 @@
 
 enum class RxState { READING_HEADERS, READING_BODY, READY };
 
-struct Client {
+struct Client
+{
     std::string rx; // Rohpuffer: während Header-Phase: Headerbytes; ab Body-Phase: Body/Reste
     std::string tx; // Antwort
 
@@ -71,7 +72,8 @@ struct Client {
     std::string host;             // aus "Host:" Header (ggf. mit :port, vorher strippen)
 };
 
-struct HeadInfo {
+struct HeadInfo
+{
     std::string method;
     std::string target;
     std::string version;
