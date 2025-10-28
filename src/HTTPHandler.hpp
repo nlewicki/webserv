@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:24 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 13:39:52 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/28 16:46:24 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,8 @@ struct Request
 	int conn_fd = -1; // -1 heist, keine verbindung
 	
 	// Request-Daten
+	bool is_chunked = false;
+	size_t content_len = 0;
 	std::string method;
 	std::string path;
 	std::string version;

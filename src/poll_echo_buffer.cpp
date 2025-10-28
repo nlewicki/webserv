@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:29 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/23 16:02:42 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/28 17:04:55 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <string>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -286,79 +287,18 @@ int main() {
 // ------ aus raw string alles rausgeholt und in Request struct
 
                         // Header komplett?
+                        Request req;
                         if (c.rx.find("\r\n\r\n") != std::string::npos)
                         {
-                            // Header komplett da
-                            size_t header_end = c.rx.find("\r\n\r\n") + 4;
-                            std::string header_str = c.rx.substr(0, header_end);
-                            std::istringstream header_stream(header_str);
-                            std::string line;
-
-                            // Erste Zeile: Methode, Pfad, Version
-                            if (std::getline(header_stream, line))
-                            {
-                                if (!line.empty() && line.back() == '\r')
-                                    line.pop_back();
-                                std::istringstream line_ss(line);
-                                line_ss >> c.method >> c.target >> c.version;
-                            }
-
-                            // Header-Zeilen
-                            while (std::getline(header_stream, line))
-                            {
-                                if (!line.empty() && line.back() == '\r')
-                                    line.pop_back();
-                                if (line.empty())
-                                    break;
-                                size_t pos = line.find(':');
-                                if (pos != std::string::npos)
-                                {
-                                    std::string key = line.substr(0, pos);
-                                    std::string value = line.substr(pos + 1);
-                                    if (!value.empty() && value[0] == ' ')
-                                        value.erase(0, 1);
-                                    c.headers[key] = value;
-                                }
-                            }
-
-                            // Keep-Alive bestimmen
-                            if (c.version == "HTTP/1.1")
-                            {
-                                c.keep_alive = !(c.headers.count("Connection") && c.headers["Connection"] == "close");
-                            }
-                            else if (c.version == "HTTP/1.0")
-                            {
-                                c.keep_alive = (c.headers.count("Connection") && c.headers["Connection"] == "keep-alive");
-                            }
-                            else
-                            {
-                                // Ungültige Version
-                                err505(i, fds, clients);
-                                break;
-                            }
-
-                            // Body-Handling vorbereiten
-                            if (c.headers.count("Transfer-Encoding") && c.headers["Transfer-Encoding"] == "chunked")
-                            {
-                                c.is_chunked = true;
-                            }
-                            else if (c.headers.count("Content-Length"))
-                            {
-                                c.content_len = std::stoul(c.headers["Content-Length"]);
-                            }
-
-                            // Body-Teil aus rx entfernen
-                            c.rx.erase(0, header_end);
-                            c.state = RxState::READY; // Für dieses Beispiel direkt READY setzen
+                            req = RequestParser().parse(c.rx);
+                            c.state = RxState::READY;
                         }
 
                         LocationConfig config;
                         Config temp;
                         temp.parse("./config/webserv.conf");
                         config = temp.servers[0].locations[0];
-                        Request req;
-                        req = RequestParser().parse(c.rx);
-                        c.state = RxState::READY;
+                        
                         c.last_active_ms = now_ms;
 
                         
@@ -366,10 +306,6 @@ int main() {
                         if (c.state == RxState::READY && c.tx.empty())
                         {
                             req.conn_fd   = fds[i].fd;
-                            req.method    = c.method;
-                            req.path      = c.target;
-                            req.version   = c.version;
-                            req.keep_alive= c.keep_alive;
                             
                             ResponseHandler handler;
                             printf("method: %s, path: %s\n", req.method.c_str(), req.path.c_str());
