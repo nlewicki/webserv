@@ -1,1 +1,21 @@
-<h1>Hello from webserv</h1>
+<!DOCTYPE html>
+<html>
+<head><title>Mein Blog</title></head>
+<body>
+    <h1>Neuer Post</h1>
+    <form action="/posts" method="POST">
+        <input name="title" placeholder="Titel" required /><br>
+        <textarea name="content" placeholder="Inhalt" required></textarea><br>
+        <button>Posten</button>
+    </form>
+
+    <h1>Alle Posts</h1>
+    <div id="posts"></div>
+
+    <script>
+        fetch('/posts').then(r => r.text()).then(html => {
+            document.getElementById('posts').innerHTML = html;
+        });
+    </script>
+</body>
+</html>
