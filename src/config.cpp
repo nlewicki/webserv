@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 11:31:30 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/29 11:56:59 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,38 +55,20 @@ void Config::parse_c(const std::string& filename) {
     while (std::getline(file, line)) {
         lineNum++;
         line = trim(line);
-        #ifdef DEBUG
-        std::cerr << "Parsing line " << lineNum << ": '" << line << "' (Stack size: " << contextStack.size() << ")" << std::endl; // Erweiterte Debugging
-        #endif
         if (line.empty() || line[0] == '#') continue;  // Ignoriere Kommentare und Leerzeilen
 
         // Handle Block-Ende
         if (line == "}") {
             if (contextStack.empty()) {
-                #ifdef DEBUG
-                std::cerr << "Warning: Extra } on line " << lineNum << ", ignoring" << std::endl;
-                #endif
                 continue;
             }
             Context closedContext = contextStack.back();
             contextStack.pop_back();
-            #ifdef DEBUG
-            std::cerr << "Popped " << (closedContext == LOCATION ? "LOCATION" : closedContext == SERVER ? "SERVER" : "GLOBAL") << ", Stack size now: " << contextStack.size() << std::endl;
-            #endif
             if (closedContext == LOCATION) {
                 currentLocation = nullptr;
-                #ifdef DEBUG
-                std::cerr << "Closed location block, context now: " << (contextStack.empty() ? "GLOBAL" : contextStack.back() == SERVER ? "SERVER" : contextStack.back() == LOCATION ? "LOCATION" : "GLOBAL") << std::endl;
-                #endif
             } else if (closedContext == SERVER) {
                 currentServer = nullptr;
-                #ifdef DEBUG
-                std::cerr << "Closed server block, context now: " << (contextStack.empty() ? "GLOBAL" : contextStack.back() == SERVER ? "SERVER" : contextStack.back() == LOCATION ? "LOCATION" : "GLOBAL") << std::endl;
-                #endif
             } else if (closedContext == GLOBAL) {
-                #ifdef DEBUG
-                std::cerr << "Warning: Closing global context on line " << lineNum << ", ignoring" << std::endl;
-                #endif
             }
             continue;
         }
@@ -101,9 +83,6 @@ void Config::parse_c(const std::string& filename) {
             servers.push_back(ServerConfig());
             currentServer = &servers.back();
             contextStack.push_back(SERVER);
-            #ifdef DEBUG
-            std::cerr << "Started server block on line " << lineNum << ", Stack size: " << contextStack.size() << std::endl;
-            #endif
             continue;
         } else if (line.find("location") == 0 && openBracePos != std::string::npos) {
             if (contextStack.back() != SERVER) {
@@ -117,23 +96,14 @@ void Config::parse_c(const std::string& filename) {
             size_t pathEnd = line.find('{');
             currentLocation->path = trim(line.substr(8, pathEnd - 8)); // "location " hat 9 Zeichen
             contextStack.push_back(LOCATION);
-            #ifdef DEBUG
-            std::cerr << "Started location block: " << currentLocation->path << " on line " << lineNum << ", Stack size: " << contextStack.size() << std::endl;
-            #endif
             // Parse interne Direktiven
             std::string nextLine;
             while (std::getline(file, nextLine)) {
                 lineNum++;
                 nextLine = trim(nextLine);
-                #ifdef DEBUG
-                std::cerr << "Parsing inner line " << lineNum << ": '" << nextLine << "' (Stack size: " << contextStack.size() << ")" << std::endl;
-                #endif
                 if (nextLine.empty() || nextLine[0] == '#') continue;
                 if (nextLine == "}") {
                     contextStack.pop_back(); // Schließe den location-Kontext
-                    #ifdef DEBUG
-                    std::cerr << "Closed location block on line " << lineNum << ", Stack size: " << contextStack.size() << std::endl;
-                    #endif
                     break;
                 }
                 size_t innerSemiPos = nextLine.find_last_of(';');
@@ -239,13 +209,6 @@ void Config::parse_c(const std::string& filename) {
 
     // Überprüfe den Stack-Zustand am Ende
     if (!contextStack.empty() && !(contextStack.size() == 1 && contextStack.back() == GLOBAL)) {
-        #ifdef DEBUG
-        std::cerr << "Warning: Unbalanced blocks at end of file, stack contains: ";
-        for (size_t i = 0; i < contextStack.size(); ++i) {
-            std::cerr << contextStack[i] << (i < contextStack.size() - 1 ? ", " : "\n");
-        }
-        std::cerr << "Assuming implicit closure" << std::endl;
-        #endif
         while (!contextStack.empty()) {
             contextStack.pop_back();
             if (currentLocation) currentLocation = nullptr;
@@ -254,13 +217,7 @@ void Config::parse_c(const std::string& filename) {
     } else {
         if (!contextStack.empty()) {
             contextStack.pop_back(); // Entferne den initialen GLOBAL-Kontext
-            #ifdef DEBUG
-            std::cerr << "Removed initial GLOBAL context, Stack size now: " << contextStack.size() << std::endl;
-            #endif
         }
-        #ifdef DEBUG
-        std::cerr << "Stack is empty at end of file" << std::endl;
-        #endif
     }
 }
 
