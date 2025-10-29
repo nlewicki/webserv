@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:36 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 11:15:52 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/29 11:23:26 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -260,6 +260,7 @@ int main(int argc, char** argv)
                         };
 
                         const LocationConfig& lc = resolve_location(sc, c.target);
+                        std::cout << "lc root" << lc.root << std::endl;
                         c.last_active_ms = now_ms;
                 
                         if (c.state == RxState::READY && c.tx.empty())
