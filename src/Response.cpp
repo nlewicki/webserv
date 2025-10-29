@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 13:51:25 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/29 11:22:15 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,7 +83,8 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 	res.headers["Keep-Alive"] = req.keep_alive ? "timeout=5, max=100" : "timeout=0, max=0";
     res.headers["Content-Type"] = "text/html";
 
-	std::string path = "www/index.html"; // default path (temporär)
+	std::cout << "------ config root" << config.root << std::endl;
+	std::string path = config.root; // default path 
 		
 	printf("path: %s\n", path.c_str());
 	if (isCGIRequest(req.path))

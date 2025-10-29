@@ -6,11 +6,13 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:36 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 11:32:15 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/29 11:35:41 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
+#include <unistd.h>
+#include <limits.h>
 
 // globals
 static Config g_cfg;
@@ -259,6 +261,7 @@ int main(int argc, char** argv)
                         {
                             req = RequestParser().parse(c.rx);
                             c.state = RxState::READY; // Für dieses Beispiel direkt READY setzen
+                            c.target = req.path;
                         }
 
 // ------ leos part ersetzt bis hier
@@ -287,6 +290,7 @@ int main(int argc, char** argv)
                         };
 
                         const LocationConfig& lc = resolve_location(sc, c.target);
+                        std::cout << "lc root" << lc.root << std::endl;
                         c.last_active_ms = now_ms;
 
                         if (c.state == RxState::READY && c.tx.empty())

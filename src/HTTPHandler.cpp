@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:22 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/28 17:03:44 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/29 11:17:17 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,64 +20,72 @@ RequestParser::~RequestParser() {};
 
 Request RequestParser::parse(const std::string& rawRequest)
 {
-	Request req;
-	std::istringstream stream(rawRequest);
+    Request req;
+    std::istringstream stream(rawRequest);
     std::string line;
 
-	
-	// Request Line
-	if (std::getline(stream, line))
-	{
-		if (!line.empty() && line.back() == '\r')
-			line.pop_back();
-		parseRequestLine(line, req);
-    }
+    // Read and parse the request-line once
+    if (!std::getline(stream, line))
+        return req; // empty request
+    if (!line.empty() && line.back() == '\r')
+        line.pop_back();
+    parseRequestLine(line, req);
 
-	// Header line -> ' '
-	while (std::getline(stream, line))
-	{
+    // Read headers
+    while (std::getline(stream, line))
+    {
         if (!line.empty() && line.back() == '\r')
             line.pop_back();
         if (line.empty())
             break;
         parseHeaderLine(line, req);
     }
-	
-	if (req.version == "HTTP/1.1")
-	{
-		req.keep_alive = !(req.headers.count("Connection") && req.headers["Connection"] == "close");
-	}
-	else if (req.version == "HTTP/1.0")
-	{
-		req.keep_alive = (req.headers.count("Connection") && req.headers["Connection"] == "keep-alive");
-	}
-	else
-	{
-		// Ungültige Version
-		std::cerr << "Invalid HTTP version" << std::endl;
-	}
-	
-	if (req.headers.count("Transfer-Encoding") && req.headers["Transfer-Encoding"] == "chunked")
-	{
-		req.is_chunked = true;
-	}
-	else if (req.headers.count("Content-Length"))
-	{
-		req.content_len = std::stoul(req.headers["Content-Length"]);
-	}
-	else
-	{
-		// Ungültige Content-Length
-		std::cerr << "Invalid Content-Length" << std::endl;
-	}
 
-	// Body
-	std::string body;
-    while (std::getline(stream, line))
-        body += line + "\n";
-    if (!body.empty() && body.back() == '\n')
-        body.pop_back();
-    req.body = body;
+    // Connection / keep-alive logic
+    if (req.version == "HTTP/1.1")
+        req.keep_alive = !(req.headers.count("Connection") && req.headers["Connection"] == "close");
+    else if (req.version == "HTTP/1.0")
+        req.keep_alive = (req.headers.count("Connection") && req.headers["Connection"] == "keep-alive");
+    else
+        std::cerr << "Invalid HTTP version" << std::endl;
+
+    // Transfer-Encoding / Content-Length
+    if (req.headers.count("Transfer-Encoding") && req.headers["Transfer-Encoding"] == "chunked")
+    {
+        req.is_chunked = true;
+    }
+    else if (req.headers.count("Content-Length"))
+    {
+        try {
+            req.content_len = std::stoul(req.headers["Content-Length"]);
+        } catch (const std::exception& e) {
+            std::cerr << "Invalid Content-Length: " << e.what() << std::endl;
+            req.content_len = 0;
+        }
+    }
+    // it's valid to have neither header (no body)
+
+    // Body: prefer exact Content-Length when provided
+    if (req.is_chunked)
+    {
+        // chunked decoding not implemented here; leave body empty or implement later
+    }
+    else if (req.content_len > 0)
+    {
+        std::string body;
+        body.resize(req.content_len);
+        stream.read(&body[0], req.content_len);
+        std::streamsize actuallyRead = stream.gcount();
+        body.resize(static_cast<size_t>(actuallyRead));
+        req.body = body;
+    }
+    else
+    {
+        // read any remaining data
+        std::string rest;
+        std::getline(stream, rest, '\0');
+        req.body = rest;
+    }
 
     return req;
 }
