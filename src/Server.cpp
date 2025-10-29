@@ -97,6 +97,8 @@ int main(int argc, char** argv)
 {
     signal(SIGPIPE, SIG_IGN);
 
+
+    // Manus part eingebaut
     const char* cfg_path = (argc > 1) ? argv[1] : "./config/webserv.conf";
     g_cfg.parse_c(cfg_path);
 
@@ -125,14 +127,15 @@ int main(int argc, char** argv)
         // diesen Server dem Port zuordnen (für vHosts)
         servers_by_port[port].push_back(s);
     }
-    
+    //----------------
 
-    const long IDLE_MS = 1500000;
+    const long IDLE_MS = 1500000; // timeout zeit
     char buf[4096];
     std::cout << "Echo server with write-buffer on port 8080...\n";
 
     for (;;)
 	{
+        // zeit setup
         using clock_t = std::chrono::steady_clock;
         using ms      = std::chrono::milliseconds;
 
@@ -149,6 +152,7 @@ int main(int argc, char** argv)
             }
         }
 
+        //poll
         int ready = poll(&fds[0], fds.size(), 1000);
         if (ready < 0) { if (errno==EINTR) continue; perror("poll"); break; }
 
