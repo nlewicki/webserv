@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:26 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/20 12:53:27 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/29 08:19:28 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ struct LocationConfig {
 	bool autoindex;                    // z.B. true (on) oder false (off)
 	std::map<std::string, std::string> cgi;  // z.B. {".php", "/usr/bin/php-cgi"}
 	std::map<int, std::string> error_pages;  // Erbt von Server/Global
+	std::string data_store;            // z.B. "$(data_dir)/posts.json"
 };
 
 // Struktur für Server-Konfiguration
@@ -44,6 +45,7 @@ public:
 	std::vector<ServerConfig> servers;
 	std::map<int, std::string> default_error_pages;  // Globale Error-Pages
 	size_t default_client_max_body_size;            // Globale Body-Size
+	std::map<std::string, std::string> variables;   // z.B. {"data_dir", "/var/www/data"}
 
 	Config();  // Konstruktor mit Default-Werten
 	void parse(const std::string& filename);  // Parsen der Config-Datei

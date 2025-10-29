@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 12:10:21 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/29 08:23:27 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -147,7 +147,12 @@ void Config::parse(const std::string& filename) {
                 std::vector<std::string> params;
                 std::string param;
                 while (iss >> param) params.push_back(param);
-                if (key == "root" && !params.empty()) {
+                if (key == "data_store" && !params.empty()) {
+                    currentLocation->data_store = params[0];
+                }
+                else if (key == "allowed_methods" && !params.empty()) {
+                    currentLocation->methods = params;
+                } else if (key == "root" && !params.empty()) {
                     currentLocation->root = params[0];
                 } else if (key == "index" && !params.empty()) {
                     currentLocation->index = params[0];  // Erstes, ignoriere mehr
@@ -208,8 +213,27 @@ void Config::parse(const std::string& filename) {
             } else if (key == "client_max_body_size" && !params.empty()) {
                 default_client_max_body_size = parseSize(params[0]);
             }
+            else if (key == "data_dir" && !params.empty()) {
+                variables["data_dir"] = params[0];
+            }
         } else {
             throw std::runtime_error("Unknown directive: " + key + " on line " + std::to_string(lineNum));
+        }
+    }
+
+    for (auto& server : servers) {
+        for (auto& loc : server.locations) {
+            if (!loc.data_store.empty()) {
+                std::string resolved = loc.data_store;
+                for (const auto& [var, value] : variables) {
+                    std::string placeholder = "$(" + var + ")";
+                    size_t pos;
+                    while ((pos = resolved.find(placeholder)) != std::string::npos) {
+                        resolved.replace(pos, placeholder.length(), value);
+                    }
+                }
+                loc.data_store = resolved;
+            }
         }
     }
 
