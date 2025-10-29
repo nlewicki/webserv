@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
+/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:36 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 10:49:12 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/29 11:32:15 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,39 +95,69 @@ static int add_listener(uint16_t port)
 
 int main(int argc, char** argv)
 {
-    signal(SIGPIPE, SIG_IGN);
-
-
-    // Manus part eingebaut
-    const char* cfg_path = (argc > 1) ? argv[1] : "./config/webserv.conf";
-    g_cfg.parse_c(cfg_path);
-
-    if (g_cfg.servers.empty())
-	{
-        std::cerr << "Failed to parse config or no servers defined in " << cfg_path << "\n";
-        return 1;
+    // === 1. AUTOMATISCHER CONFIG-PFAD ===
+    const char* cfg_path = "./config/webserv.conf";
+    if (argc > 1) {
+        cfg_path = argv[1];  // Optional: ./webserv my.conf
     }
-    
-	// pro Port nur EINEN Socket binden
-	std::unordered_map<int /*port*/, int /*lfd*/> lfd_by_port;
+
+    // === 2. CONFIG LADEN MIT FALLBACK ===
+    try {
+        g_cfg.parse_c(cfg_path);
+        std::cout << "Config geladen: " << cfg_path << "\n";
+    } catch (const std::exception& e) {
+        std::cerr << "Config-Fehler (" << cfg_path << "): " << e.what() << "\n";
+        std::cerr << "→ Starte mit Default-Server auf 127.0.0.1:8080\n";
+
+        // --- DEFAULT-SERVER MANUELL ANLEGEN ---
+        ServerConfig defaultServer;
+        defaultServer.listen_host = "127.0.0.1";
+        defaultServer.listen_port = 8080;
+        defaultServer.server_name = "default";
+        defaultServer.client_max_body_size = 1048576;  // 1MB
+
+        LocationConfig defaultLoc;
+        defaultLoc.path = "/";
+        defaultLoc.root = "./html";
+        defaultLoc.index = "index.html";
+        defaultLoc.autoindex = true;
+        defaultLoc.methods = {"GET", "POST", "DELETE"};
+
+        defaultServer.locations.push_back(defaultLoc);
+        g_cfg.servers.push_back(defaultServer);
+    }
+
+    // === 3. DEFAULTS FÜR ALLE SERVER/LOCATIONS SETZEN ===
+    for (auto& server : g_cfg.servers) {
+        if (server.listen_port == 0) server.listen_port = 80;
+        if (server.client_max_body_size == 0) server.client_max_body_size = 1048576;
+        if (server.error_pages.empty()) server.error_pages = g_cfg.default_error_pages;
+
+        for (auto& loc : server.locations) {
+            if (loc.index.empty()) loc.index = "index.html";
+            if (loc.methods.empty()) loc.methods = {"GET", "POST", "DELETE"};
+            if (loc.error_pages.empty()) loc.error_pages = server.error_pages;
+            if (!loc.autoindex) loc.autoindex = false;
+        }
+    }
+
+    // === 4. LISTENER AUS CONFIG STARTEN ===
+    std::unordered_map<int, int> lfd_by_port;
 
     for (size_t s = 0; s < g_cfg.servers.size(); ++s)
-	{
+    {
         const ServerConfig& sc = g_cfg.servers[s];
         int port = sc.listen_port;
 
-        // ggf. neuen Listener für diesen Port anlegen
         if (lfd_by_port.find(port) == lfd_by_port.end())
-		{
-            int lfd = add_listener(port);              // deine existierende Funktion (bind 0.0.0.0:port)
-            lfd_by_port[port]     = lfd;
+        {
+            int lfd = add_listener(port);
+            lfd_by_port[port] = lfd;
             port_by_listener_fd[lfd] = port;
             std::cout << "Listening on *:" << port << " (lfd=" << lfd << ")\n";
         }
-        // diesen Server dem Port zuordnen (für vHosts)
         servers_by_port[port].push_back(s);
     }
-    //----------------
 
     const long IDLE_MS = 1500000; // timeout zeit
     char buf[4096];
@@ -216,7 +246,7 @@ int main(int argc, char** argv)
                     if (n > 0)
 					{
                         Client &c = clients[i];
-                        c.last_active_ms = now_ms; 
+                        c.last_active_ms = now_ms;
                         c.rx.append(buf, n);
 
 // ------ hier Leo sein Zeug rein
@@ -258,11 +288,11 @@ int main(int argc, char** argv)
 
                         const LocationConfig& lc = resolve_location(sc, c.target);
                         c.last_active_ms = now_ms;
-                
+
                         if (c.state == RxState::READY && c.tx.empty())
                         {
                             req.conn_fd   = fds[i].fd;
-                            
+
                             ResponseHandler handler;
                             printf("method: %s, path: %s\n", req.method.c_str(), req.path.c_str());
                             Response res = handler.handleRequest(req, lc);
@@ -272,13 +302,13 @@ int main(int argc, char** argv)
                             c.tx         = res.toString();
                             fds[i].events |= POLLOUT;
                         }
-                        
+
 
 // alles mehr oder weniger leo
 
                         continue; // weiter lesen, falls Kernel noch mehr hat
                     }
-					else if (n == 0) 
+					else if (n == 0)
 					{
                         ::close(fds[i].fd);
                         fds.erase(fds.begin()+i);

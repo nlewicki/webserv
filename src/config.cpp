@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   config.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
+/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 10:50:58 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/29 11:31:30 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -261,35 +261,6 @@ void Config::parse_c(const std::string& filename) {
         #ifdef DEBUG
         std::cerr << "Stack is empty at end of file" << std::endl;
         #endif
-    }
-
-    // Setze Defaults nach dem Parsen
-    if (servers.empty()) {
-        // Default-Server, wenn keine Config
-        servers.push_back(ServerConfig());
-        currentServer = &servers.back();
-        currentServer->listen_host = "127.0.0.1";
-        currentServer->listen_port = 8080;
-        currentServer->server_name = "default";
-        currentServer->client_max_body_size = default_client_max_body_size;
-        LocationConfig defaultLoc;
-        defaultLoc.path = "/";
-        defaultLoc.root = "./";
-        defaultLoc.index = "index.html";
-        defaultLoc.autoindex = false;
-        defaultLoc.methods = {"GET", "POST", "DELETE"};
-        currentServer->locations.push_back(defaultLoc);
-    }
-    for (std::vector<ServerConfig>::iterator it = servers.begin(); it != servers.end(); ++it) {
-        if (it->listen_port == 0) it->listen_port = 80;  // Default-Port
-        if (it->client_max_body_size == 0) it->client_max_body_size = default_client_max_body_size;
-        if (it->error_pages.empty()) it->error_pages = default_error_pages;
-        for (std::vector<LocationConfig>::iterator locIt = it->locations.begin(); locIt != it->locations.end(); ++locIt) {
-            if (locIt->index.empty()) locIt->index = "index.html";
-            if (locIt->methods.empty()) locIt->methods.push_back("GET"), locIt->methods.push_back("POST"), locIt->methods.push_back("DELETE");
-            if (locIt->error_pages.empty()) locIt->error_pages = it->error_pages;
-            if (!locIt->autoindex) locIt->autoindex = false;  // Explicit setzen
-        }
     }
 }
 
