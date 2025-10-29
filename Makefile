@@ -1,6 +1,6 @@
 
 CXX     := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Werror -O2 -Iinclude
+CXXFLAGS := -std=c++17  -O2 -Iinclude
 
 DBGFLAGS := -g -O0
 

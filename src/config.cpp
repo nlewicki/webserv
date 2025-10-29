@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   config.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
+/*   By: nicolewicki <nicolewicki@student.42.fr>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 12:10:21 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/27 09:21:30 by nicolewicki      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,7 @@ enum Context { GLOBAL, SERVER, LOCATION };
 Config::Config() : default_client_max_body_size(1048576) {}
 
 // Haupt-Parsing-Funktion
-void Config::parse(const std::string& filename) {
+void Config::parse_c(const std::string& filename) {
     std::ifstream file(filename.c_str());
     if (!file.is_open()) throw std::runtime_error("Cannot open config file: " + filename);
 

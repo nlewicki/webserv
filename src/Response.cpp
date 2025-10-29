@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 11:51:21 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/22 13:51:25 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,19 +70,22 @@ bool ResponseHandler::fileExists(const std::string& path)
 	return (stat(path.c_str(), &buf) == 0);
 }
 
-Response ResponseHandler::handleRequest(const Request& req)
+Response ResponseHandler::handleRequest(const Request& req, const LocationConfig& config)
 {
 	Response res;
+	printf("config_path: %s\n", config.path.c_str());
 
 	res.keep_alive = req.keep_alive;
 	
 	// default headers
 	res.headers["Server"] = "webserv/1.0";
-    res.headers["Connection"] = "close";
+    // res.headers["Connection"] = "close";
+	res.headers["Keep-Alive"] = req.keep_alive ? "timeout=5, max=100" : "timeout=0, max=0";
     res.headers["Content-Type"] = "text/html";
 
-	std::string path = "." + req.path;
-
+	std::string path = "www/index.html"; // default path (temporär)
+		
+	printf("path: %s\n", path.c_str());
 	if (isCGIRequest(req.path))
 	{
 		CGIHandler cgi;

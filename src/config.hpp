@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   config.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
+/*   By: nicolewicki <nicolewicki@student.42.fr>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:26 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/20 12:53:27 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/27 09:21:22 by nicolewicki      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ public:
 	size_t default_client_max_body_size;            // Globale Body-Size
 
 	Config();  // Konstruktor mit Default-Werten
-	void parse(const std::string& filename);  // Parsen der Config-Datei
+	void parse_c(const std::string& filename);  // Parsen der Config-Datei
 	const std::vector<ServerConfig>& getServers() const { return servers; }
 };
 
