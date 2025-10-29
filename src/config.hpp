@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   config.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nicolewicki <nicolewicki@student.42.fr>    +#+  +:+       +#+        */
+/*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:26 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/27 09:21:22 by nicolewicki      ###   ########.fr       */
+/*   Updated: 2025/10/29 10:51:04 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ struct LocationConfig {
 	bool autoindex;                    // z.B. true (on) oder false (off)
 	std::map<std::string, std::string> cgi;  // z.B. {".php", "/usr/bin/php-cgi"}
 	std::map<int, std::string> error_pages;  // Erbt von Server/Global
+	std::string data_store;            // z.B. "$(data_dir)/posts.json"
 };
 
 // Struktur für Server-Konfiguration
@@ -44,6 +45,7 @@ public:
 	std::vector<ServerConfig> servers;
 	std::map<int, std::string> default_error_pages;  // Globale Error-Pages
 	size_t default_client_max_body_size;            // Globale Body-Size
+	std::map<std::string, std::string> variables;   // z.B. {"data_dir", "/var/www/data"}
 
 	Config();  // Konstruktor mit Default-Werten
 	void parse_c(const std::string& filename);  // Parsen der Config-Datei

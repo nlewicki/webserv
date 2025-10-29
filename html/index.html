@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Mein 42 Blog</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        .post { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+        textarea { width: 100%; height: 100px; }
+    </style>
+</head>
+<body>
+    <h1>Mein Blog</h1>
+
+    <!-- POST FORMULAR -->
+    <form action="/posts" method="POST">
+        <input name="title" placeholder="Titel" required style="width:100%; padding:8px; margin:5px 0;"><br>
+        <textarea name="content" placeholder="Inhalt..." required></textarea><br>
+        <button style="padding:10px 20px;">Posten</button>
+    </form>
+
+    <h2>Alle Posts</h2>
+    <div id="posts"></div>
+
+    <script>
+        fetch('/posts').then(r => r.json()).then(posts => {
+            const div = document.getElementById('posts');
+            if (posts.length === 0) {
+                div.innerHTML = '<i>Keine Posts yet.</i>';
+                return;
+            }
+            posts.forEach(p => {
+                div.innerHTML += `
+                    <div class="post">
+                        <h3>${p.title}</h3>
+                        <p><small>${p.timestamp}</small></p>
+                        <p>${p.content.replace(/\n/g, '<br>')}</p>
+                    </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
