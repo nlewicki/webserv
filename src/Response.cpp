@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 11:53:43 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/29 15:04:37 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -108,9 +108,24 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 	}
 	else if (req.method == "POST")
 	{
-		res.statusCode = 200;
-		res.reasonPhrase = getStatusMessage(200);
-		res.body = "<h1>POST received!</h1><p>" + req.body + "</p>";
+		std::string dir = config.data_dir.empty() ? "./data" : config.data_dir;
+		std::string filename = dir + "/post_" + std::to_string(time(NULL)) + ".txt";
+		std::ofstream out(filename.c_str());
+		if (!out.is_open())
+		{
+			res.statusCode = 500;
+			res.reasonPhrase = "Internal Server Error";
+			res.body = "<h1>500 Internal Server Error</h1><p>Could not write to data folder.</p>";
+		}
+		else
+		{
+			out << req.body;
+			out.close();
+
+			res.statusCode = 200;
+			res.reasonPhrase = getStatusMessage(200);
+			res.body = "<h1>POST stored successfully!</h1><p>Saved as " + filename + "</p>";
+		}
 	}
 	else if (req.method == "DELETE")
 	{
