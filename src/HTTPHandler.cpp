@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   HTTPHandler.cpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
+/*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:22 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/21 09:27:23 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/28 17:03:44 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,8 @@ Request RequestParser::parse(const std::string& rawRequest)
 	std::istringstream stream(rawRequest);
     std::string line;
 
-	// Reqeust Line
+	
+	// Request Line
 	if (std::getline(stream, line))
 	{
 		if (!line.empty() && line.back() == '\r')
@@ -41,6 +42,34 @@ Request RequestParser::parse(const std::string& rawRequest)
             break;
         parseHeaderLine(line, req);
     }
+	
+	if (req.version == "HTTP/1.1")
+	{
+		req.keep_alive = !(req.headers.count("Connection") && req.headers["Connection"] == "close");
+	}
+	else if (req.version == "HTTP/1.0")
+	{
+		req.keep_alive = (req.headers.count("Connection") && req.headers["Connection"] == "keep-alive");
+	}
+	else
+	{
+		// Ungültige Version
+		std::cerr << "Invalid HTTP version" << std::endl;
+	}
+	
+	if (req.headers.count("Transfer-Encoding") && req.headers["Transfer-Encoding"] == "chunked")
+	{
+		req.is_chunked = true;
+	}
+	else if (req.headers.count("Content-Length"))
+	{
+		req.content_len = std::stoul(req.headers["Content-Length"]);
+	}
+	else
+	{
+		// Ungültige Content-Length
+		std::cerr << "Invalid Content-Length" << std::endl;
+	}
 
 	// Body
 	std::string body;
