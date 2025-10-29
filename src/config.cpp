@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 11:56:59 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/10/29 12:44:50 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,18 +20,18 @@
 
 // Hilfsfunktion: Entfernt führende und nachfolgende Whitespaces
 std::string trim(const std::string& str) {
-    std::string s = str;
-    s.erase(0, s.find_first_not_of(" \t\n\r\f\v"));  // Left Trim
-    s.erase(s.find_last_not_of(" \t\n\r\f\v") + 1);  // Right Trim
-    return s;
+	std::string s = str;
+	s.erase(0, s.find_first_not_of(" \t\n\r\f\v"));  // Left Trim
+	s.erase(s.find_last_not_of(" \t\n\r\f\v") + 1);  // Right Trim
+	return s;
 }
 
 // Hilfsfunktion: Parst Größenangaben wie 2M oder 1K
 size_t parseSize(const std::string& sizeStr) {
-    size_t size = std::atoi(sizeStr.c_str());
-    if (sizeStr.find('M') != std::string::npos) size *= 1024 * 1024;
-    else if (sizeStr.find('K') != std::string::npos) size *= 1024;
-    return size;
+	size_t size = std::atoi(sizeStr.c_str());
+	if (sizeStr.find('M') != std::string::npos) size *= 1024 * 1024;
+	else if (sizeStr.find('K') != std::string::npos) size *= 1024;
+	return size;
 }
 
 // Enum für Kontext-Tracking
@@ -42,182 +42,194 @@ Config::Config() : default_client_max_body_size(1048576) {}
 
 // Haupt-Parsing-Funktion
 void Config::parse_c(const std::string& filename) {
-    std::ifstream file(filename.c_str());
-    if (!file.is_open()) throw std::runtime_error("Cannot open config file: " + filename);
+	std::ifstream file(filename.c_str());
+	if (!file.is_open()) throw std::runtime_error("Cannot open config file: " + filename);
 
-    std::vector<Context> contextStack;
-    contextStack.push_back(GLOBAL); // Initialer GLOBAL-Kontext
-    ServerConfig* currentServer = nullptr;
-    LocationConfig* currentLocation = nullptr;
+	std::vector<Context> contextStack;
+	contextStack.push_back(GLOBAL); // Initialer GLOBAL-Kontext
+	ServerConfig* currentServer = nullptr;
+	LocationConfig* currentLocation = nullptr;
 
-    std::string line;
-    int lineNum = 0;
-    while (std::getline(file, line)) {
-        lineNum++;
-        line = trim(line);
-        if (line.empty() || line[0] == '#') continue;  // Ignoriere Kommentare und Leerzeilen
+	std::string line;
+	int lineNum = 0;
+	while (std::getline(file, line)) {
+		lineNum++;
+		line = trim(line);
+		if (line.empty() || line[0] == '#') continue;  // Ignoriere Kommentare und Leerzeilen
 
-        // Handle Block-Ende
-        if (line == "}") {
-            if (contextStack.empty()) {
-                continue;
-            }
-            Context closedContext = contextStack.back();
-            contextStack.pop_back();
-            if (closedContext == LOCATION) {
-                currentLocation = nullptr;
-            } else if (closedContext == SERVER) {
-                currentServer = nullptr;
-            } else if (closedContext == GLOBAL) {
-            }
-            continue;
-        }
+		// Handle Block-Ende
+		if (line == "}") {
+			if (contextStack.empty()) {
+				continue;
+			}
+			Context closedContext = contextStack.back();
+			contextStack.pop_back();
+			if (closedContext == LOCATION) {
+				currentLocation = nullptr;
+			} else if (closedContext == SERVER) {
+				currentServer = nullptr;
+			} else if (closedContext == GLOBAL) {
+			}
+			continue;
+		}
 
-        // Prüfe auf Block-Start
-        size_t serverPos = line.find("server");
-        size_t openBracePos = line.find('{');
-        if (serverPos != std::string::npos && openBracePos != std::string::npos && serverPos < openBracePos) {
-            if (contextStack.back() != GLOBAL) {
-                throw std::runtime_error("Server block not allowed in this context on line " + std::to_string(lineNum));
-            }
-            servers.push_back(ServerConfig());
-            currentServer = &servers.back();
-            contextStack.push_back(SERVER);
-            continue;
-        } else if (line.find("location") == 0 && openBracePos != std::string::npos) {
-            if (contextStack.back() != SERVER) {
-                throw std::runtime_error("Location block not allowed in this context on line " + std::to_string(lineNum));
-            }
-            if (!currentServer) {
-                throw std::runtime_error("No current server on line " + std::to_string(lineNum));
-            }
-            currentServer->locations.push_back(LocationConfig());
-            currentLocation = &currentServer->locations.back();
-            size_t pathEnd = line.find('{');
-            currentLocation->path = trim(line.substr(8, pathEnd - 8)); // "location " hat 9 Zeichen
-            contextStack.push_back(LOCATION);
-            // Parse interne Direktiven
-            std::string nextLine;
-            while (std::getline(file, nextLine)) {
-                lineNum++;
-                nextLine = trim(nextLine);
-                if (nextLine.empty() || nextLine[0] == '#') continue;
-                if (nextLine == "}") {
-                    contextStack.pop_back(); // Schließe den location-Kontext
-                    break;
-                }
-                size_t innerSemiPos = nextLine.find_last_of(';');
-                if (innerSemiPos == std::string::npos) {
-                    throw std::runtime_error("Missing ; on line " + std::to_string(lineNum));
-                }
-                std::string innerDirective = trim(nextLine.substr(0, innerSemiPos));
-                std::istringstream iss(innerDirective);
-                std::string key;
-                iss >> key;
-                std::vector<std::string> params;
-                std::string param;
-                while (iss >> param) params.push_back(param);
-                if (key == "data_store" && !params.empty()) {
-                    currentLocation->data_store = params[0];
-                }
-                else if (key == "allowed_methods" && !params.empty()) {
-                    currentLocation->methods = params;
-                } else if (key == "root" && !params.empty()) {
-                    currentLocation->root = params[0];
-                } else if (key == "index" && !params.empty()) {
-                    currentLocation->index = params[0];  // Erstes, ignoriere mehr
-                } else if (key == "autoindex" && !params.empty()) {
-                    currentLocation->autoindex = (params[0] == "on");
-                } else if (key == "methods" && !params.empty()) {
-                    currentLocation->methods = params;
-                } else if (key == "cgi" && params.size() >= 2) {
-                    currentLocation->cgi[params[0]] = params[1];
-                } else {
-                    throw std::runtime_error("Unknown directive: " + key + " on line " + std::to_string(lineNum));
-                }
-            }
-            continue;
-        }
+		// Prüfe auf Block-Start
+		size_t serverPos = line.find("server");
+		size_t openBracePos = line.find('{');
+		if (serverPos != std::string::npos && openBracePos != std::string::npos && serverPos < openBracePos) {
+			if (contextStack.back() != GLOBAL) {
+				throw std::runtime_error("Server block not allowed in this context on line " + std::to_string(lineNum));
+			}
+			servers.push_back(ServerConfig());
+			currentServer = &servers.back();
+			contextStack.push_back(SERVER);
+			continue;
+		} else if (line.find("location") == 0 && openBracePos != std::string::npos) {
+			if (contextStack.back() != SERVER) {
+				throw std::runtime_error("Location block not allowed in this context on line " + std::to_string(lineNum));
+			}
+			if (!currentServer) {
+				throw std::runtime_error("No current server on line " + std::to_string(lineNum));
+			}
+			currentServer->locations.push_back(LocationConfig());
+			currentLocation = &currentServer->locations.back();
+			size_t pathEnd = line.find('{');
+			currentLocation->path = trim(line.substr(8, pathEnd - 8)); // "location " hat 9 Zeichen
+			contextStack.push_back(LOCATION);
+			// Parse interne Direktiven
+			std::string nextLine;
+			while (std::getline(file, nextLine)) {
+				lineNum++;
+				nextLine = trim(nextLine);
+				if (nextLine.empty() || nextLine[0] == '#') continue;
+				if (nextLine == "}") {
+					contextStack.pop_back(); // Schließe den location-Kontext
+					break;
+				}
+				size_t innerSemiPos = nextLine.find_last_of(';');
+				if (innerSemiPos == std::string::npos) {
+					throw std::runtime_error("Missing ; on line " + std::to_string(lineNum));
+				}
+				std::string innerDirective = trim(nextLine.substr(0, innerSemiPos));
+				std::istringstream iss(innerDirective);
+				std::string key;
+				iss >> key;
+				std::vector<std::string> params;
+				std::string param;
+				while (iss >> param) params.push_back(param);
+				if (key == "data_store" && !params.empty()) {
+					currentLocation->data_store = params[0];
+				}
+				else if (key == "allowed_methods" && !params.empty()) {
+					currentLocation->methods = params;
+				} else if (key == "root" && !params.empty()) {
+					currentLocation->root = params[0];
+				} else if (key == "index" && !params.empty()) {
+					currentLocation->index = params[0];  // Erstes, ignoriere mehr
+				} else if (key == "autoindex" && !params.empty()) {
+					currentLocation->autoindex = (params[0] == "on");
+				} else if (key == "methods" && !params.empty()) {
+					currentLocation->methods = params;
+				} else if (key == "cgi" && params.size() >= 2) {
+					currentLocation->cgi[params[0]] = params[1];
+				} else if (key == "cgi_dir" && !params.empty()) {
+					currentLocation->cgi_dir = params[0];
+				}
+				else if (key == "error_dir" && !params.empty()) {
+					currentLocation->error_dir = params[0];
+				}
+				else if (key == "data_dir" && !params.empty()) {
+					currentLocation->data_dir = params[0];
+				}
+				else if (key == "data_store" && !params.empty()) {
+					currentLocation->data_store = params[0];
+				} else {
+					throw std::runtime_error("Unknown directive: " + key + " on line " + std::to_string(lineNum));
+				}
+			}
+			continue;
+		}
 
-        // Parse Direktiven basierend auf globalem oder server-Kontext
-        size_t semiPos = line.find_last_of(';');
-        if (semiPos == std::string::npos) {
-            throw std::runtime_error("Missing ; on line " + std::to_string(lineNum));
-        }
-        std::string directive = trim(line.substr(0, semiPos));
+		// Parse Direktiven basierend auf globalem oder server-Kontext
+		size_t semiPos = line.find_last_of(';');
+		if (semiPos == std::string::npos) {
+			throw std::runtime_error("Missing ; on line " + std::to_string(lineNum));
+		}
+		std::string directive = trim(line.substr(0, semiPos));
 
-        std::istringstream iss(directive);
-        std::string key;
-        iss >> key;
-        std::vector<std::string> params;
-        std::string param;
-        while (iss >> param) params.push_back(param);
+		std::istringstream iss(directive);
+		std::string key;
+		iss >> key;
+		std::vector<std::string> params;
+		std::string param;
+		while (iss >> param) params.push_back(param);
 
-        Context ctx = contextStack.back();
-        if (ctx == SERVER && currentServer) {
-            if (key == "listen" && !params.empty()) {
-                size_t colonPos = params[0].find(':');
-                if (colonPos != std::string::npos) {
-                    currentServer->listen_host = params[0].substr(0, colonPos);
-                    currentServer->listen_port = std::atoi(params[0].substr(colonPos + 1).c_str());
-                } else {
-                    currentServer->listen_port = std::atoi(params[0].c_str());
-                    currentServer->listen_host = "*";  // Default Wildcard
-                }
-            } else if (key == "server_name" && !params.empty()) {
-                currentServer->server_name = params[0];  // Erstes, ignoriere mehr
-            } else if (key == "error_page" && !params.empty()) {
-                if (params.size() < 2) throw std::runtime_error("Invalid error_page directive on line " + std::to_string(lineNum));
-                int code = std::atoi(params[0].c_str());
-                std::string path = params[1];
-                currentServer->error_pages[code] = path;
-            } else if (key == "client_max_body_size" && !params.empty()) {
-                currentServer->client_max_body_size = parseSize(params[0]);
-            }
-        } else if (ctx == GLOBAL) {
-            if (key == "error_page" && !params.empty()) {
-                if (params.size() < 2) throw std::runtime_error("Invalid error_page directive on line " + std::to_string(lineNum));
-                int code = std::atoi(params[0].c_str());
-                std::string path = params[1];
-                default_error_pages[code] = path;
-            } else if (key == "client_max_body_size" && !params.empty()) {
-                default_client_max_body_size = parseSize(params[0]);
-            }
-            else if (key == "data_dir" && !params.empty()) {
-                variables["data_dir"] = params[0];
-            }
-        } else {
-            throw std::runtime_error("Unknown directive: " + key + " on line " + std::to_string(lineNum));
-        }
-    }
+		Context ctx = contextStack.back();
+		if (ctx == SERVER && currentServer) {
+			if (key == "listen" && !params.empty()) {
+				size_t colonPos = params[0].find(':');
+				if (colonPos != std::string::npos) {
+					currentServer->listen_host = params[0].substr(0, colonPos);
+					currentServer->listen_port = std::atoi(params[0].substr(colonPos + 1).c_str());
+				} else {
+					currentServer->listen_port = std::atoi(params[0].c_str());
+					currentServer->listen_host = "*";  // Default Wildcard
+				}
+			} else if (key == "server_name" && !params.empty()) {
+				currentServer->server_name = params[0];  // Erstes, ignoriere mehr
+			} else if (key == "error_page" && !params.empty()) {
+				if (params.size() < 2) throw std::runtime_error("Invalid error_page directive on line " + std::to_string(lineNum));
+				int code = std::atoi(params[0].c_str());
+				std::string path = params[1];
+				currentServer->error_pages[code] = path;
+			} else if (key == "client_max_body_size" && !params.empty()) {
+				currentServer->client_max_body_size = parseSize(params[0]);
+			}
+		} else if (ctx == GLOBAL) {
+			if (key == "error_page" && !params.empty()) {
+				if (params.size() < 2) throw std::runtime_error("Invalid error_page directive on line " + std::to_string(lineNum));
+				int code = std::atoi(params[0].c_str());
+				std::string path = params[1];
+				default_error_pages[code] = path;
+			} else if (key == "client_max_body_size" && !params.empty()) {
+				default_client_max_body_size = parseSize(params[0]);
+			}
+			else if (key == "data_dir" && !params.empty()) {
+				variables["data_dir"] = params[0];
+			}
+		} else {
+			throw std::runtime_error("Unknown directive: " + key + " on line " + std::to_string(lineNum));
+		}
+	}
 
-    for (auto& server : servers) {
-        for (auto& loc : server.locations) {
-            if (!loc.data_store.empty()) {
-                std::string resolved = loc.data_store;
-                for (const auto& [var, value] : variables) {
-                    std::string placeholder = "$(" + var + ")";
-                    size_t pos;
-                    while ((pos = resolved.find(placeholder)) != std::string::npos) {
-                        resolved.replace(pos, placeholder.length(), value);
-                    }
-                }
-                loc.data_store = resolved;
-            }
-        }
-    }
+	for (auto& server : servers) {
+	for (auto& loc : server.locations) {
+		// $(data_dir) ersetzen
+		if (!loc.data_store.empty()) {
+			std::string resolved = loc.data_store;
+			for (const auto& [var, val] : variables) {
+				std::string ph = "$(" + var + ")";
+				size_t pos;
+				while ((pos = resolved.find(ph)) != std::string::npos) {
+					resolved.replace(pos, ph.length(), val);
+				}
+			}
+			loc.data_store = resolved;
+		}
+	}
+}
 
-    // Überprüfe den Stack-Zustand am Ende
-    if (!contextStack.empty() && !(contextStack.size() == 1 && contextStack.back() == GLOBAL)) {
-        while (!contextStack.empty()) {
-            contextStack.pop_back();
-            if (currentLocation) currentLocation = nullptr;
-            if (currentServer) currentServer = nullptr;
-        }
-    } else {
-        if (!contextStack.empty()) {
-            contextStack.pop_back(); // Entferne den initialen GLOBAL-Kontext
-        }
-    }
+	// Überprüfe den Stack-Zustand am Ende
+	if (!contextStack.empty() && !(contextStack.size() == 1 && contextStack.back() == GLOBAL)) {
+		while (!contextStack.empty()) {
+			contextStack.pop_back();
+			if (currentLocation) currentLocation = nullptr;
+			if (currentServer) currentServer = nullptr;
+		}
+	} else {
+		if (!contextStack.empty()) {
+			contextStack.pop_back(); // Entferne den initialen GLOBAL-Kontext
+		}
+	}
 }
 
