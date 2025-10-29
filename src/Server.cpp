@@ -6,11 +6,13 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:36 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 10:49:12 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/29 11:15:52 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
+#include <unistd.h>
+#include <limits.h>
 
 // globals
 static Config g_cfg;
@@ -99,7 +101,7 @@ int main(int argc, char** argv)
 
 
     // Manus part eingebaut
-    const char* cfg_path = (argc > 1) ? argv[1] : "./config/webserv.conf";
+    const char* cfg_path = (argc > 1) ? argv[1] : "./config/";
     g_cfg.parse_c(cfg_path);
 
     if (g_cfg.servers.empty())
@@ -229,6 +231,7 @@ int main(int argc, char** argv)
                         {
                             req = RequestParser().parse(c.rx);
                             c.state = RxState::READY; // Für dieses Beispiel direkt READY setzen
+                            c.target = req.path;
                         }
 
 // ------ leos part ersetzt bis hier
