@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 15:04:37 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/10/30 14:25:02 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -129,8 +129,12 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 	}
 	else if (req.method == "DELETE")
 	{
-		std::string path = "." + req.path;
-		if (fileExists(path) && std::remove(path.c_str()) == 0)
+		std::string dir = config.data_dir.empty() ? "./data" : config.data_dir;
+		std::string filepath = dir;
+		filepath += "/" + req.body; // assuming the filename to delete is in the body
+		std::cout << "DELETE path: " << filepath << std::endl;
+
+		if (fileExists(filepath) && std::remove(filepath.c_str()) == 0)
 		{
 			res.statusCode = 200;
 			res.reasonPhrase = getStatusMessage(200);
@@ -149,7 +153,7 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 		res.reasonPhrase = getStatusMessage(405);
         res.body = "<h1>405 Method Not Allowed</h1>";
 	}
-	std::cout << res.toString() << std::endl;
 	res.headers ["Content-Length"] = std::to_string(res.body.size());
+	std::cout << res.toString() << std::endl;
 	return res;
 }
