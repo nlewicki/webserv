@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 12:44:50 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/11/04 11:05:27 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -120,7 +120,7 @@ void Config::parse_c(const std::string& filename) {
 				if (key == "data_store" && !params.empty()) {
 					currentLocation->data_store = params[0];
 				}
-				else if (key == "allowed_methods" && !params.empty()) {
+				else if (key == "allow_methods" && !params.empty()) {
 					currentLocation->methods = params;
 				} else if (key == "root" && !params.empty()) {
 					currentLocation->root = params[0];
