@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/05 11:32:32 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/05 11:51:54 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -224,7 +224,8 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 		if (isDirectory(fsPath)) {
 			// ensure trailing slash in URL behavior handled elsewhere; here we just check
 			std::string indexFile = joinPath(fsPath, config.index.empty() ? "index.html" : config.index);
-			if (fileExists(indexFile)) {
+			if (fileExists(indexFile))
+			{
 				// serve index file
 				res.statusCode = 200;
 				res.reasonPhrase = getStatusMessage(200);
@@ -232,7 +233,9 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 				res.headers["Content-Type"] = getMimeType(indexFile);
 				res.headers["Content-Length"] = std::to_string(res.body.size());
 				return res;
-			} else if (config.autoindex) {
+			}
+			else if (config.autoindex)
+			{
 				// generate listing
 				std::string urlPrefix = url; // used for links
 				std::string listing = generateDirectoryListing(fsPath, urlPrefix);
@@ -242,7 +245,9 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 				res.headers["Content-Type"] = "text/html";
 				res.headers["Content-Length"] = std::to_string(res.body.size());
 				return res;
-			} else {
+			}
+			else
+			{
 				res.statusCode = 403;
 				res.reasonPhrase = "Forbidden";
 				res.body = "<h1>403 Forbidden</h1><p>Index disabled.</p>";
@@ -255,7 +260,8 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 		// 4) If path is file -> CGI? or static
 		if (fileExists(fsPath)) {
 			// If CGI extension detected, forward to CGI handler (you may need to pass filesystem path in req)
-			if (isCGIRequest(fsPath)) {
+			if (isCGIRequest(fsPath))
+			{
 				CGIHandler cgi;
 				return cgi.execute(req); // consider setting env/path in req for CGI
 			}
@@ -267,7 +273,9 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 			res.headers["Content-Type"] = getMimeType(fsPath);
 			res.headers["Content-Length"] = std::to_string(res.body.size());
 			return res;
-		} else {
+		}
+		else
+		{
 			// Not found
 			res.statusCode = 404;
 			res.reasonPhrase = getStatusMessage(404);
