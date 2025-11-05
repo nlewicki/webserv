@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/30 14:25:02 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/05 11:22:10 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,8 @@
 #include <sstream>
 #include <sys/stat.h>
 #include <iostream>
+#include <iomanip>
+#include <dirent.h>
 
 ResponseHandler::ResponseHandler() {}
 ResponseHandler::~ResponseHandler() {}
@@ -40,6 +42,104 @@ static bool isCGIRequest(const std::string& path)
 
     std::string ext = path.substr(dot + 1);
     return (ext == "py" || ext == "php" || ext == "cgi");
+}
+
+// URL-decode (simple)
+static std::string urlDecode(const std::string& s) {
+    std::string ret;
+    ret.reserve(s.size());
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == '%' && i + 2 < s.size()) {
+            char hex[3] = { s[i+1], s[i+2], 0 };
+            ret += static_cast<char>(std::strtol(hex, nullptr, 16));
+            i += 2;
+        } else if (s[i] == '+') {
+            ret += ' ';
+        } else {
+            ret += s[i];
+        }
+    }
+    return ret;
+}
+
+
+// Normiert Pfad: entfernt doppelte Slashes, einfache Normalisierung
+static std::string normalizePath(const std::string& path) {
+    std::string out;
+    out.reserve(path.size());
+    bool lastSlash = false;
+    for (char c : path) {
+        if (c == '/') {
+            if (!lastSlash) { out += '/'; lastSlash = true; }
+        } else {
+            out += c; lastSlash = false;
+        }
+    }
+    if (out.size() > 1 && out.back() == '/') out.pop_back(); // entferne letzten Slash (außer "/" selbst)
+    if (out.empty()) out = "/";
+    return out;
+}
+
+static bool containsPathTraversal(const std::string& s) {
+    if (s.find("..") != std::string::npos) return true;
+    return false;
+}
+
+// Einfaches join (achtet auf Slashes)
+static std::string joinPath(const std::string& a, const std::string& b) {
+    if (a.empty()) return b;
+    if (b.empty()) return a;
+    std::string out = a;
+    if (out.back() != '/') out += '/';
+    if (b.front() == '/') out += b.substr(1); else out += b;
+    return out;
+}
+
+// MIME-Mapping (erweiterbar)
+static std::string getMimeType(const std::string& path) {
+    static const std::map<std::string, std::string> m = {
+        { "html", "text/html" }, { "htm", "text/html" }, { "css", "text/css" },
+        { "js", "application/javascript" }, { "json", "application/json" },
+        { "png", "image/png" }, { "jpg", "image/jpeg" }, { "jpeg", "image/jpeg" },
+        { "gif", "image/gif" }, { "svg", "image/svg+xml" }, { "txt", "text/plain" },
+        { "pdf", "application/pdf" }, { "ico", "image/x-icon" }
+    };
+    size_t dot = path.find_last_of('.');
+    if (dot == std::string::npos) return "application/octet-stream";
+    std::string ext = path.substr(dot + 1);
+    // lower
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    auto it = m.find(ext);
+    if (it != m.end()) return it->second;
+    return "application/octet-stream";
+}
+
+// Generiere einfaches Verzeichnis-Listing (HTML)
+static std::string generateDirectoryListing(const std::string& dirPath, const std::string& urlPrefix) {
+    DIR* dp = opendir(dirPath.c_str());
+    if (!dp) return "<h1>500 Cannot open directory</h1>";
+    std::ostringstream out;
+    out << "<!doctype html><html><head><meta charset=\"utf-8\"><title>Index of " 
+        << urlPrefix << "</title></head><body>";
+    out << "<h1>Index of " << urlPrefix << "</h1><ul>";
+    struct dirent* e;
+    while ((e = readdir(dp)) != NULL) {
+        std::string name = e->d_name;
+        if (name == "." || name == "..") continue;
+        // Escape name? minimal:
+        out << "<li><a href=\"" << (urlPrefix.back()=='/'? urlPrefix : urlPrefix + "/") << name << "\">"
+            << name << "</a></li>";
+    }
+    out << "</ul></body></html>";
+    closedir(dp);
+    return out.str();
+}
+
+// check file or dir via stat
+static bool isDirectory(const std::string& path) {
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) return false;
+    return S_ISDIR(st.st_mode);
 }
 
 std::string ResponseHandler::getStatusMessage(int code)
