@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/05 11:22:10 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/05 11:32:32 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -193,19 +193,91 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 	}
 	if (req.method == "GET")
 	{
-		if (!fileExists(path))
-		{
+		// 1) URL-decode und normalize
+		std::string url = urlDecode(req.path);
+		if (url.empty()) url = "/";
+		url = normalizePath(url);
+
+		if (containsPathTraversal(url)) {
+			res.statusCode = 403;
+			res.reasonPhrase = "Forbidden";
+			res.body = "<h1>403 Forbidden</h1>";
+			res.headers["Content-Type"] = "text/html";
+			res.headers["Content-Length"] = std::to_string(res.body.size());
+			return res;
+		}
+
+		// 2) Find location root
+		//    Build filesystem path relative to location.root
+		std::string fsPath = config.root;
+		if (fsPath.empty()) fsPath = "."; // fallback
+		// strip location path prefix if present: assume req.path is the full URL path; 
+		// if location.path is not "/", remove prefix
+		std::string trimmedUrl = url;
+		if (!config.path.empty() && config.path != "/" && trimmedUrl.find(config.path) == 0) {
+			trimmedUrl = trimmedUrl.substr(config.path.length());
+			if (trimmedUrl.empty()) trimmedUrl = "/";
+		}
+		fsPath = joinPath(fsPath, trimmedUrl);
+
+		// 3) If path is directory -> serve index or autoindex
+		if (isDirectory(fsPath)) {
+			// ensure trailing slash in URL behavior handled elsewhere; here we just check
+			std::string indexFile = joinPath(fsPath, config.index.empty() ? "index.html" : config.index);
+			if (fileExists(indexFile)) {
+				// serve index file
+				res.statusCode = 200;
+				res.reasonPhrase = getStatusMessage(200);
+				res.body = readFile(indexFile);
+				res.headers["Content-Type"] = getMimeType(indexFile);
+				res.headers["Content-Length"] = std::to_string(res.body.size());
+				return res;
+			} else if (config.autoindex) {
+				// generate listing
+				std::string urlPrefix = url; // used for links
+				std::string listing = generateDirectoryListing(fsPath, urlPrefix);
+				res.statusCode = 200;
+				res.reasonPhrase = getStatusMessage(200);
+				res.body = listing;
+				res.headers["Content-Type"] = "text/html";
+				res.headers["Content-Length"] = std::to_string(res.body.size());
+				return res;
+			} else {
+				res.statusCode = 403;
+				res.reasonPhrase = "Forbidden";
+				res.body = "<h1>403 Forbidden</h1><p>Index disabled.</p>";
+				res.headers["Content-Type"] = "text/html";
+				res.headers["Content-Length"] = std::to_string(res.body.size());
+				return res;
+			}
+		}
+
+		// 4) If path is file -> CGI? or static
+		if (fileExists(fsPath)) {
+			// If CGI extension detected, forward to CGI handler (you may need to pass filesystem path in req)
+			if (isCGIRequest(fsPath)) {
+				CGIHandler cgi;
+				return cgi.execute(req); // consider setting env/path in req for CGI
+			}
+
+			// Serve file
+			res.statusCode = 200;
+			res.reasonPhrase = getStatusMessage(200);
+			res.body = readFile(fsPath);
+			res.headers["Content-Type"] = getMimeType(fsPath);
+			res.headers["Content-Length"] = std::to_string(res.body.size());
+			return res;
+		} else {
+			// Not found
 			res.statusCode = 404;
 			res.reasonPhrase = getStatusMessage(404);
 			res.body = "<h1>404 Not Found</h1>";
-		}
-		else
-		{
-			res.statusCode = 200;
-			res.reasonPhrase = getStatusMessage(200);
-			res.body = readFile(path);
+			res.headers["Content-Type"] = "text/html";
+			res.headers["Content-Length"] = std::to_string(res.body.size());
+			return res;
 		}
 	}
+
 	else if (req.method == "POST")
 	{
 		std::string dir = config.data_dir.empty() ? "./data" : config.data_dir;
