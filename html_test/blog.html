@@ -1,65 +1,151 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <title>Mini-Blog</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>article{border:1px solid #ddd;padding:8px;border-radius:8px;margin:8px 0}</style>
+  <title>Mein 42 Blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --accent: #1f6bff;
+      --border: #ddd;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      padding: 32px 40px 48px;
+      position: relative;
+    }
+
+    /* Zurück-Button oben links */
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: var(--accent);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background 0.2s ease;
+    }
+    .back-btn:hover { background: #0f54d0; }
+
+    h1 {
+      text-align: center;
+      margin-top: 0;
+      color: var(--accent);
+    }
+
+    form {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    input, textarea {
+      font: inherit;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+    }
+
+    button {
+      align-self: center;
+      padding: 10px 24px;
+      font-weight: 600;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    button:hover { background: #0f54d0; }
+
+    h2 {
+      margin-top: 48px;
+      text-align: center;
+      color: #333;
+    }
+
+    .post {
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin: 16px 0;
+      background: #fafafa;
+    }
+
+    .post h3 { margin: 0 0 6px; color: #111; }
+    .post small { color: #666; }
+    .muted { color: #999; text-align: center; }
+
+  </style>
 </head>
 <body>
-  <h1>Mini-Blog</h1>
+  <div class="container">
+    <a class="back-btn" href="index.html">← Zurück</a>
 
-  <h2>Neuen Post anlegen (Form-POST)</h2>
-  <form action="/blog" method="post" enctype="application/x-www-form-urlencoded">
-    <input name="title" placeholder="Titel" required />
-    <br />
-    <textarea name="body" placeholder="Text" required></textarea><br />
-    <button type="submit">POST /blog</button>
-  </form>
+    <h1>Mein Blog</h1>
 
-  <h2>Liste</h2>
-  <div id="list">(lädt…)</div>
+    <!-- POST FORMULAR -->
+    <form action="/posts" method="POST">
+      <input name="title" placeholder="Titel" required />
+      <textarea name="content" placeholder="Inhalt..." required></textarea>
+      <button type="submit">Posten</button>
+    </form>
 
-  <h2>Löschen</h2>
-  <form id="deleteForm">
-    <input name="id" placeholder="ID" required />
-    <button type="submit">DELETE /blog/{id}</button>
-  </form>
+    <h2>Alle Posts</h2>
+    <div id="posts" class="posts"></div>
+  </div>
 
   <script>
-    async function loadList(){
-      const r = await fetch('/blog', {headers:{'accept':'application/json'}});
-      const data = r.ok ? await r.json() : [];
-      const wrap = document.getElementById('list');
-      wrap.innerHTML = '';
-      for(const p of data){
-        const el = document.createElement('article');
-        el.innerHTML = `<strong>#${p.id} ${p.title}</strong><p>${p.body}</p>`;
-        wrap.appendChild(el);
+    async function loadPosts() {
+      const out = document.getElementById('posts');
+      try {
+        const r = await fetch('/posts', { headers: { 'accept': 'application/json' }, cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const posts = await r.json();
+        out.innerHTML = '';
+        if (!posts.length) {
+          out.innerHTML = '<p class="muted"><i>Keine Posts vorhanden.</i></p>';
+          return;
+        }
+        posts.forEach(p => {
+          const html = `
+            <div class="post">
+              <h3>${p.title}</h3>
+              <p><small>${p.timestamp || ''}</small></p>
+              <p>${(p.content || '').replace(/\n/g, '<br>')}</p>
+            </div>`;
+          out.innerHTML += html;
+        });
+      } catch (e) {
+        out.innerHTML = `<p class="muted">Fehler beim Laden: ${e.message}</p>`;
       }
     }
-    document.getElementById('deleteForm').onsubmit = async (e)=>{
-      e.preventDefault();
-      const id = new FormData(e.target).get('id');
-      const r = await fetch('/blog/'+encodeURIComponent(id), {method:'DELETE'});
-      alert('Status: '+r.status);
-      loadList();
-    };
-    loadList();
+
+    loadPosts();
   </script>
-
-  <h3>cURL-Beispiele</h3>
-  <pre>
-# POST (urlencoded)
-curl -i -X POST http://localhost:8080/blog \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  --data "title=Hello&body=World"
-
-# DELETE echt:
-curl -i -X DELETE http://localhost:8080/blog/1
-
-# DELETE via Method-Override:
-curl -i -X POST "http://localhost:8080/blog?_method=DELETE" --data "id=1"
-  </pre>
 </body>
 </html>

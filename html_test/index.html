@@ -2,28 +2,98 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <title>Webserv Demo</title>
+  <title>Webserv</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="data:,"><!-- verhindert /favicon.ico -->
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;max-width:680px;margin:40px auto;padding:0 16px}
-    .grid{display:grid;gap:12px}
-    a.button, button{display:inline-block;padding:12px 16px;border:1px solid #ccc;border-radius:10px;text-decoration:none}
+    :root{
+      --panel:#1f6bff;     /* Blau wie im Screenshot */
+      --blob:#a78bfa;      /* Lila Blobs */
+      --ink:#1b1b1b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:#80868b;  /* grauer Hintergrund */
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      color:#fff;
+    }
+
+    /* Panel (blauer Kasten) */
+    .panel{
+      width:min(90vw, 880px);
+      margin:40px;
+      background:var(--panel);
+      border-radius:10px;
+      padding:40px;
+      box-shadow:0 8px 28px rgba(0,0,0,.25);
+      text-align:center;
+      min-height:480px;
+    }
+
+    h1{
+      margin:0 0 100px;
+      font-weight:700;
+      font-size:52px;
+      letter-spacing:.5px;
+    }
+
+    .buttons{
+      display:flex;
+      justify-content:center;
+      gap:36px;
+      flex-wrap:wrap;
+    }
+
+    /* Blob-Buttons */
+    .blob{
+      --w: 180px; --h: 80px;
+      width:var(--w); height:var(--h);
+      background:var(--blob);
+      color:#1b1b1b;
+      font-weight:700;
+      font-size:20px;
+      display:flex;
+      align-items:center; justify-content:center;
+      text-decoration:none;
+      border-radius:40% 60% 55% 45% / 60% 40% 60% 40%;
+      border:2px solid rgba(0,0,0,.25);
+      box-shadow:
+        inset 0 -2px 0 rgba(0,0,0,.08),
+        0 6px 16px rgba(0,0,0,.25);
+      transition:transform .12s ease, box-shadow .12s ease;
+    }
+    .blob:nth-child(2){ border-radius:50% 50% 45% 55% / 55% 45% 55% 45%; }
+    .blob:nth-child(3){ border-radius:55% 45% 60% 40% / 45% 55% 40% 60%; }
+
+    .blob:hover{
+      transform:translateY(-3px);
+      box-shadow:0 10px 22px rgba(0,0,0,.35);
+    }
+    .blob:active{
+      transform:translateY(0);
+      box-shadow:0 6px 16px rgba(0,0,0,.25);
+    }
+
+    @media (max-width:650px){
+      h1{font-size:40px}
+      .blob{ --w: 140px; --h: 68px; font-size:18px; }
+    }
   </style>
 </head>
 <body>
-  <h1>Webserv Demo</h1>
-  <p>Wähle eine Demo:</p>
-  <div class="grid">
-    <a class="button" href="/time.html">Aktuelle Uhrzeit</a>
-    <a class="button" href="/blog.html">Mini-Blog (GET/POST/DELETE)</a>
-    <a class="button" href="/color.html">Farb-Cookie</a>
+  <div class="panel">
+    <h1>Webserv</h1>
+    <div class="buttons">
+      <a class="blob" href="time.html">Zeit</a>
+      <a class="blob" href="blog.html">Blog</a>
+      <a class="blob" href="color.html">Farbe</a>
+    </div>
   </div>
-
-  <h2>Zusatztests</h2>
-  <ul>
-    <li><a href="/old-blog">Redirect (301 → /blog)</a></li>
-    <li><a href="/does-not-exist">404 Demo</a></li>
-    <li><a href="/listing/">Directory Listing</a></li>
-  </ul>
 </body>
 </html>
+
