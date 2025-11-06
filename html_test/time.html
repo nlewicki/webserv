@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Serverzeit</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+<body>
+  <h1>Serverzeit</h1>
+  <p>Antwort von <code>GET /time</code>:</p>
+  <pre id="out">(lädt…)</pre>
+  <button id="reload">Neu laden</button>
+  <script>
+    async function load() {
+      const r = await fetch('/time', {cache:'no-store'});
+      const text = await r.text();
+      document.getElementById('out').textContent =
+        text + "\n\nStatus: " + r.status + " " + r.statusText +
+        "\nContent-Type: " + (r.headers.get('content-type')||'(none)');
+    }
+    document.getElementById('reload').onclick = load;
+    load();
+  </script>
+  <p>Tipp (curl): <code>curl -i http://localhost:8080/time</code></p>
+</body>
+</html>

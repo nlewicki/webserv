@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Farb-Cookie</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>body{transition:background-color .2s}</style>
+</head>
+<body>
+  <h1>Hintergrundfarbe per Cookie</h1>
+  <form action="/set-color" method="post">
+    <input type="color" name="bg" value="#4f46e5" />
+    <button type="submit">Setze Cookie (POST /set-color)</button>
+  </form>
+  <p>Nach dem Absenden sollte der Server <code>Set-Cookie: bg=…</code> setzen und mit <code>302 Location: /color</code> zurückleiten.</p>
+  <p>Wenn der Server bei <code>GET /color</code> den Cookie liest, sollte der Hintergrund bereits gefärbt sein.</p>
+  <script>
+    // Optional: clientseitig anwenden, falls Server (noch) kein Template baut:
+    function getCookie(name){return document.cookie.split('; ').find(r=>r.startsWith(name+'='))?.split('=')[1]}
+    const c = getCookie('bg');
+    if (c) document.body.style.backgroundColor = decodeURIComponent(c);
+  </script>
+  <pre>
+curl -i -X POST http://localhost:8080/set-color \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data "bg=%23ff8800"
+  </pre>
+</body>
+</html>
