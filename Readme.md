@@ -16,3 +16,13 @@ Start of a webserver
 | 9️⃣     | Konfiguration (mehrere Server/Ports)             |
 | 🔟      | Error Pages, Stress Tests, Browserkompatibilität |
 test
+
+
+
+
+
+FRONTEND
+
+BACKGROUND FARBEN ANPASSEN
+Kaesten gleich gros machen
+Farbe und uhrzeit (sript?)
