@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:24 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/28 16:46:24 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/11 09:56:19 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@ struct Request
 	std::string path;
 	std::string version;
 	std::string query;
+	std::map<std::string, std::string> cookies;
 	std::map<std::string, std::string> headers;
 	std::string body;
 };

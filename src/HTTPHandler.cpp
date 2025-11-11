@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:22 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/29 11:17:17 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/11 10:15:33 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,6 +90,34 @@ Request RequestParser::parse(const std::string& rawRequest)
     return req;
 }
 
+static inline std::string trim(const std::string& s)
+{
+    size_t a = s.find_first_not_of(" \t\r\n");
+    if (a == std::string::npos) return "";
+    size_t b = s.find_last_not_of(" \t\r\n");
+    return s.substr(a, b - a + 1);
+}
+
+static std::map<std::string,std::string> parseCookieHeader(const std::string& header)
+{
+    std::map<std::string,std::string> out;
+    size_t pos = 0;
+    while (pos < header.size()) {
+        // split by ';'
+        size_t semi = header.find(';', pos);
+        std::string pair = header.substr(pos, (semi==std::string::npos) ? std::string::npos : semi - pos);
+        size_t eq = pair.find('=');
+        if (eq != std::string::npos) {
+            std::string k = trim(pair.substr(0, eq));
+            std::string v = trim(pair.substr(eq + 1));
+            out[k] = v;
+        }
+        if (semi == std::string::npos) break;
+        pos = semi + 1;
+    }
+    return out;
+}
+
 void RequestParser::parseRequestLine(const std::string& line, Request& req)
 {
 	std::istringstream ss(line);
@@ -108,8 +136,13 @@ void RequestParser::parseHeaderLine(const std::string& line, Request& req)
 	std::string key = line.substr(0, pos);
 	std::string value = line.substr(pos + 1);
 
+
 	if (!value.empty() && value[0] == ' ')
         value.erase(0, 1);
 
-    req.headers[key] = value;
+    if (key == "Cookie")
+        req.cookies = parseCookieHeader(value);
+    else
+        req.headers[key] = value;
 }
+

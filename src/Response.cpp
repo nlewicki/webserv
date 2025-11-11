@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Response.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nlewicki <nlewicki@student.42.fr>          +#+  +:+       +#+        */
+/*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/06 10:32:09 by nlewicki         ###   ########.fr       */
+/*   Updated: 2025/11/11 10:21:25 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,13 +29,27 @@ std::string Response::toString() const
 {
     std::ostringstream ss;
     ss << "HTTP/1.1 " << statusCode << " " << reasonPhrase << "\r\n";
-    for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
+	for (size_t i = 0; i < set_cookies.size(); ++i)																// set cookies
+        ss << "Set-Cookie: " << set_cookies[i] << "\r\n";
+    for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it)	// headers
         ss << it->first << ": " << it->second << "\r\n";
     ss << "\r\n";
     ss << body;
     return ss.str();
 }
 
+// Setzt ein Cookie im Response
+void Response::setCookie(const std::string& name, const std::string& value, const std::string& path, int maxAge, bool httpOnly,
+						 const std::string& sameSite)
+{
+	std::ostringstream sc;
+	sc << name << "=" << value;
+	if (maxAge >= 0) sc << "; Max-Age=" << maxAge;
+	if (!path.empty()) sc << "; Path=" << path;
+	if (httpOnly) sc << "; HttpOnly";
+	if (!sameSite.empty()) sc << "; SameSite=" << sameSite; // "Lax"|"Strict"|"None"
+	set_cookies.push_back(sc.str());
+}
 static bool isCGIRequest(const std::string& path)
 {
     size_t dot = path.find_last_of('.');

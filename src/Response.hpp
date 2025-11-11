@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:34 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/22 13:38:43 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/11 10:01:35 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,8 +24,11 @@ struct Response
 	std::map<std::string, std::string> headers;
 	std::string body;
 	bool keep_alive = false;
+	std::vector<std::string> set_cookies;
 
 	std::string toString() const;
+	void setCookie(const std::string& name, const std::string& value, const std::string& path = "/", int maxAge = -1, bool httpOnly = false,
+                   const std::string& sameSite = "");
 };
 
 class ResponseHandler
