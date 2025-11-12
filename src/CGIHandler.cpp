@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:14 by mhummel           #+#    #+#             */
-/*   Updated: 2025/10/27 14:54:39 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/12 12:36:57 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,17 @@ std::map<std::string, std::string> CGIHandler::buildEnv(const Request& req, cons
 	env["CONTENT_TYPE"] = "text/plain";
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
 	env["SERVER_SOFTWARE"] = "webserv/1.0";
+	env["REDIRECT_STATUS"] = "200";  // notwendig für PHP-CGI
 	return env;
+}
+
+static std::string getInterpreter(const std::string& scriptPath)
+{
+    if (scriptPath.find(".py") != std::string::npos)
+        return "/usr/bin/python3";
+    if (scriptPath.find(".php") != std::string::npos)
+        return "/usr/local/bin/php-cgi";
+    return "";
 }
 
 std::string CGIHandler::runCGI(const std::string& scriptPath, const std::map<std::string, std::string>& env, const std::string& body)
@@ -88,13 +98,24 @@ std::string CGIHandler::runCGI(const std::string& scriptPath, const std::map<std
 		envp[i] = NULL;
 
 		// argv bauen
-		char* argv[2];
-		argv[0] = const_cast<char*>(scriptPath.c_str());
-		argv[1] = NULL;
+		std::string interpreter = getInterpreter(scriptPath);
+		char* argv[3];
+		if (!interpreter.empty()) {
+			// z. B. PHP, Python ohne Shebang
+			argv[0] = const_cast<char*>(interpreter.c_str());
+			argv[1] = const_cast<char*>(scriptPath.c_str());
+			argv[2] = NULL;
+			execve(interpreter.c_str(), argv, envp);
+		} else {
+			// Script hat Shebang (#!/usr/bin/python3)
+			argv[0] = const_cast<char*>(scriptPath.c_str());
+			argv[1] = NULL;
+			execve(scriptPath.c_str(), argv, envp);
+		}
 
-		execve(scriptPath.c_str(), argv, envp);
 		perror("execve");
 		exit(1);
+
 	}
 	else if (pid > 0)
 	{
