@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:22 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/11 10:15:33 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/12 11:52:10 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -145,4 +145,3 @@ void RequestParser::parseHeaderLine(const std::string& line, Request& req)
     else
         req.headers[key] = value;
 }
-

@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:31 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/11 10:21:25 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/12 11:52:46 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -305,24 +305,109 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 	else if (req.method == "POST")
 	{
 		std::string dir = config.data_dir.empty() ? "./data" : config.data_dir;
-		std::string filename = dir + "/post_" + std::to_string(time(NULL)) + ".txt";
-		std::ofstream out(filename.c_str());
-		if (!out.is_open())
+		std::string contentType;
+		if (req.headers.count("Content-Type"))
+			contentType = req.headers.find("Content-Type")->second;
+
+		// --- Multipart upload ---
+		if (contentType.find("multipart/form-data") != std::string::npos)
 		{
-			res.statusCode = 500;
-			res.reasonPhrase = "Internal Server Error";
-			res.body = "<h1>500 Internal Server Error</h1><p>Could not write to data folder.</p>";
+			// 1. Boundary extrahieren
+			size_t pos = contentType.find("boundary=");
+			if (pos == std::string::npos)
+			{
+				res.statusCode = 400;
+				res.reasonPhrase = "Bad Request";
+				res.body = "<h1>400 Bad Request</h1><p>Missing multipart boundary.</p>";
+			}
+			else
+			{
+				std::string boundary = "--" + contentType.substr(pos + 9);
+				std::string body = req.body;
+
+				// 2. Datei extrahieren (vereinfachte Variante)
+				size_t fileStart = body.find("filename=\"");
+				if (fileStart == std::string::npos)
+				{
+					res.statusCode = 400;
+					res.reasonPhrase = "Bad Request";
+					res.body = "<h1>400 Bad Request</h1><p>No file field found.</p>";
+				}
+				else
+				{
+					fileStart += 10;
+					size_t fileEnd = body.find("\"", fileStart);
+					std::string originalName = body.substr(fileStart, fileEnd - fileStart);
+
+					// 3. Dateidatenbereich suchen
+					size_t dataStart = body.find("\r\n\r\n", fileEnd);
+					if (dataStart == std::string::npos)
+					{
+						res.statusCode = 400;
+						res.reasonPhrase = "Bad Request";
+						res.body = "<h1>400 Bad Request</h1><p>Malformed multipart data.</p>";
+					}
+					else
+					{
+						dataStart += 4;
+						size_t dataEnd = body.find(boundary, dataStart);
+						std::string fileContent = body.substr(dataStart, dataEnd - dataStart);
+						// Strip trailing \r\n if present
+						if (fileContent.size() >= 2 && fileContent[fileContent.size() - 2] == '\r')
+							fileContent.erase(fileContent.size() - 2);
+
+						// 4. Sicherer Dateiname (keine Pfad-Traversal)
+						for (size_t i = 0; i < originalName.size(); ++i)
+							if (originalName[i] == '/' || originalName[i] == '\\')
+								originalName[i] = '_';
+
+						std::string filePath = dir + "/" + originalName;
+
+						// 5. Datei speichern
+						std::ofstream out(filePath.c_str(), std::ios::binary);
+						if (!out.is_open())
+						{
+							res.statusCode = 500;
+							res.reasonPhrase = "Internal Server Error";
+							res.body = "<h1>500 Internal Server Error</h1><p>Could not write to data folder.</p>";
+						}
+						else
+						{
+							out.write(fileContent.data(), fileContent.size());
+							out.close();
+
+							res.statusCode = 200;
+							res.reasonPhrase = getStatusMessage(200);
+							res.body = "<h1>Upload successful!</h1><p>Saved as " + filePath + "</p>";
+						}
+					}
+				}
+			}
 		}
+
+		// --- Fallback: raw upload ---
 		else
 		{
-			out << req.body;
-			out.close();
+			std::string filename = dir + "/upload_" + std::to_string(time(NULL));
+			std::ofstream out(filename.c_str(), std::ios::binary);
+			if (!out.is_open())
+			{
+				res.statusCode = 500;
+				res.reasonPhrase = "Internal Server Error";
+				res.body = "<h1>500 Internal Server Error</h1><p>Could not write to data folder.</p>";
+			}
+			else
+			{
+				out.write(req.body.data(), req.body.size());
+				out.close();
 
-			res.statusCode = 200;
-			res.reasonPhrase = getStatusMessage(200);
-			res.body = "<h1>POST stored successfully!</h1><p>Saved as " + filename + "</p>";
+				res.statusCode = 200;
+				res.reasonPhrase = getStatusMessage(200);
+				res.body = "<h1>POST stored successfully!</h1><p>Saved as " + filename + "</p>";
+			}
 		}
 	}
+
 	else if (req.method == "DELETE")
 	{
 		std::string dir = config.data_dir.empty() ? "./data" : config.data_dir;
