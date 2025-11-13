@@ -6,7 +6,7 @@
 /*   By: leokubler <leokubler@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:22 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/12 11:52:10 by leokubler        ###   ########.fr       */
+/*   Updated: 2025/11/13 10:22:01 by leokubler        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,71 @@
 RequestParser::RequestParser() {};
 
 RequestParser::~RequestParser() {};
+
+static bool decodeChunkedBody(std::istream& stream, std::string& out, std::string& err)
+{
+    out.clear();
+    std::string line;
+
+    while (true) {
+        // Lese die Size-Line (hex [;extensions]) terminated by CRLF
+        if (!std::getline(stream, line)) { err = "unexpected EOF reading chunk size"; return false; }
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+
+        // ignore any empty lines before the size (robustness)
+        if (line.empty()) continue;
+
+        size_t sem = line.find(';');
+        std::string sizeStr = (sem == std::string::npos) ? line : line.substr(0, sem);
+
+        size_t chunkSize = 0;
+        try {
+            chunkSize = std::stoul(sizeStr, nullptr, 16);
+        } catch (...) {
+            err = "invalid chunk size";
+            return false;
+        }
+
+        if (chunkSize == 0) {
+            // letzte Chunk: consume optional trailer headers until empty line
+            while (std::getline(stream, line)) {
+                if (!line.empty() && line.back() == '\r') line.pop_back();
+                if (line.empty()) break;
+            }
+            return true;
+        }
+
+        // Lese exakt chunkSize Bytes
+        std::string chunk;
+        chunk.resize(chunkSize);
+        stream.read(&chunk[0], static_cast<std::streamsize>(chunkSize));
+        std::streamsize got = stream.gcount();
+        if (static_cast<size_t>(got) != chunkSize) { err = "incomplete chunk data"; return false; }
+        out.append(chunk);
+
+        // Nach dem Chunk muss ein CRLF kommen; versuchen sauber zu konsumieren
+        // Lese zwei Zeichen; toleriere LF allein (robust gegen einige senders).
+        int c1 = stream.get();
+        if (c1 == EOF) { err = "missing chunk terminator (EOF)"; return false; }
+        if (c1 == '\n') {
+            // ok (lenient)
+            continue;
+        }
+        if (c1 == '\r') {
+            int c2 = stream.get();
+            if (c2 == EOF) { err = "missing chunk terminator (EOF)"; return false; }
+            if (c2 == '\n') continue;
+            // unexpected char after '\r'
+            err = "invalid chunk terminator";
+            return false;
+        }
+        // unexpected char (neither LF nor CR)
+        err = "invalid chunk terminator";
+        return false;
+    }
+    // unreachable
+    return false;
+}
 
 Request RequestParser::parse(const std::string& rawRequest)
 {
@@ -63,12 +128,16 @@ Request RequestParser::parse(const std::string& rawRequest)
             req.content_len = 0;
         }
     }
-    // it's valid to have neither header (no body)
 
     // Body: prefer exact Content-Length when provided
     if (req.is_chunked)
     {
-        // chunked decoding not implemented here; leave body empty or implement later
+        std::string err;
+        if (!decodeChunkedBody(stream, req.body, err))
+        {
+            std::cerr << "Chunked decode error: " << err << std::endl;
+            req.body.clear();
+        }
     }
     else if (req.content_len > 0)
     {
