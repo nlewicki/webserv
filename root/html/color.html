@@ -145,8 +145,8 @@
         <div class="content-card">
             <h2>Farbauswahl mit Cookies</h2>
             <p>
-                Wähle eine Akzentfarbe aus. Deine Auswahl wird als Cookie <code>color</code> gespeichert
-                und vom WebServ als CSS-Variable <code>--user-color</code> ins HTML injiziert.
+                Wähle eine Farbe aus. Deine Auswahl wird als Cookie <code>color</code> gespeichert
+                und vom WebServ als Variable ins HTML injiziert.
             </p>
 
             <div class="color-preview" id="colorPreview"></div>
@@ -233,10 +233,7 @@
 
         function clearCookie() {
             document.cookie = 'color=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            // Nach dem Löschen wieder auf Server- oder Defaultfarbe zurückfallen
-            const cssVar = getComputedStyle(document.body).getPropertyValue('--user-color').trim();
-            selectedColor = cssVar || '#22d3ee';
-            updateDisplay();
+            location.reload();
         }
 
         // Color-Buttons erzeugen

@@ -330,7 +330,11 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 
 	else if (req.method == "POST")
 	{
-		std::string dir = config.data_dir.empty() ? "./root/data/posts" : config.data_dir;
+		// Uploads immer relativ zum Location-Root speichern
+		std::string dir = config.root;
+		if (dir.empty())
+			dir = "./root/data/posts"; // Fallback, sollte eigentlich nicht nötig sein
+		std::cout << "POST data dir: " << dir << std::endl;
 		std::string contentType;
 		if (req.headers.count("Content-Type"))
 			contentType = req.headers.find("Content-Type")->second;
