@@ -299,6 +299,8 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 			res.body = readFile(fsPath);
 			res.headers["Content-Type"] = getMimeType(fsPath);
 
+			//DEBUG output cookie color value
+			std::cout << "---------------Cookie color: " << color << std::endl;
 			if (res.headers["Content-Type"] == "text/html") {
 				size_t pos = res.body.find("<body");
 				if (pos != std::string::npos) {

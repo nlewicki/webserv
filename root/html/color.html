@@ -63,6 +63,8 @@
             margin: 12px 0 20px;
             border: 1px solid #e2e8f0;
             box-shadow: inset 0 0 0 1px rgba(15,23,42,0.03);
+            /* Fallback: falls JS nicht läuft, nimm serverseitige CSS-Variable */
+            background: var(--user-color, #22d3ee);
         }
 
         .color-grid {
@@ -142,7 +144,10 @@
 
         <div class="content-card">
             <h2>Farbauswahl mit Cookies</h2>
-            <p>Wähle eine Akzentfarbe aus. Deine Auswahl wird in einem Cookie gespeichert und beim nächsten Besuch wiederhergestellt.</p>
+            <p>
+                Wähle eine Akzentfarbe aus. Deine Auswahl wird als Cookie <code>color</code> gespeichert
+                und vom WebServ als CSS-Variable <code>--user-color</code> ins HTML injiziert.
+            </p>
 
             <div class="color-preview" id="colorPreview"></div>
 
@@ -150,7 +155,7 @@
 
             <div class="info-box">
                 <div>Ausgewählte Farbe: <span id="selectedColor">#22d3ee</span></div>
-                <div>Cookie-Name: <span>selectedColor</span></div>
+                <div>Cookie-Name: <span>color</span></div>
                 <div>Cookie-Wert: <span id="cookieValue">nicht gesetzt</span></div>
             </div>
 
@@ -176,8 +181,7 @@
             { name: 'Grün', value: '#22c55e' }
         ];
 
-        let selectedColor = '#22d3ee';
-
+        // Helper: Cookie lesen
         function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -185,16 +189,31 @@
             return null;
         }
 
+        // Helper: Cookie setzen (Name = "color", path=/)
         function setCookie(name, value, days = 365) {
             const expires = new Date();
             expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
             document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
         }
 
+        // 1. Startfarbe vom Server aus CSS-Variable lesen
+        let selectedColor = (function () {
+            const body = document.body;
+            const cssVar = getComputedStyle(body).getPropertyValue('--user-color').trim();
+            if (cssVar) return cssVar;
+            return '#22d3ee'; // Fallback, falls nichts gesetzt ist
+        })();
+
+        // 2. Falls es schon ein "color"-Cookie gibt → das hat Priorität
+        const savedColor = getCookie('color');
+        if (savedColor) {
+            selectedColor = savedColor;
+        }
+
         function updateDisplay() {
             document.getElementById('colorPreview').style.backgroundColor = selectedColor;
             document.getElementById('selectedColor').textContent = selectedColor;
-            const cookieValue = getCookie('selectedColor');
+            const cookieValue = getCookie('color');
             document.getElementById('cookieValue').textContent = cookieValue || 'nicht gesetzt';
 
             document.querySelectorAll('.color-btn').forEach(btn => {
@@ -208,16 +227,19 @@
 
         function selectColor(color) {
             selectedColor = color;
-            setCookie('selectedColor', color);
+            setCookie('color', color);
             updateDisplay();
         }
 
         function clearCookie() {
-            document.cookie = 'selectedColor=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            selectedColor = '#22d3ee';
+            document.cookie = 'color=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            // Nach dem Löschen wieder auf Server- oder Defaultfarbe zurückfallen
+            const cssVar = getComputedStyle(document.body).getPropertyValue('--user-color').trim();
+            selectedColor = cssVar || '#22d3ee';
             updateDisplay();
         }
 
+        // Color-Buttons erzeugen
         const grid = document.getElementById('colorGrid');
         colors.forEach(color => {
             const btn = document.createElement('button');
@@ -228,11 +250,6 @@
             btn.onclick = () => selectColor(color.value);
             grid.appendChild(btn);
         });
-
-        const savedColor = getCookie('selectedColor');
-        if (savedColor) {
-            selectedColor = savedColor;
-        }
 
         updateDisplay();
     </script>
