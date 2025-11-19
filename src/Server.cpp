@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nlewicki <nlewicki@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:36 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/19 10:20:26 by nlewicki         ###   ########.fr       */
+/*   Updated: 2025/11/19 10:24:58 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -122,7 +122,7 @@ int main(int argc, char** argv)
 
         LocationConfig defaultLoc;
         defaultLoc.path = "/";
-        defaultLoc.root = "./html";
+        defaultLoc.root = "./root/html";
         defaultLoc.index = "index.html";
         defaultLoc.autoindex = true;
         defaultLoc.methods = {"GET", "POST", "DELETE"};
@@ -274,7 +274,7 @@ int main(int argc, char** argv)
                         size_t headerEnd = c.rx.find("\r\n\r\n");
                         if (headerEnd == std::string::npos)
                             continue; // Header noch nicht komplett, weiter lesen
-                        
+
                         std::string headers = c.rx.substr(0, headerEnd + 4);
                         size_t clPos = headers.find("Content-Length:");
                         size_t contentLength = 0;
