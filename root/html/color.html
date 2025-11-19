@@ -1,17 +1,148 @@
-<!-- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Farbauswahl - WebServ</title>
 
+    <style>
+        body {
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif;
+            background: #f5f6fa;
+            margin: 0;
+            padding: 0;
+            color: #222;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 32px 20px;
+        }
+
+        .btn-back {
+            display: inline-block;
+            padding: 10px 16px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #4f46e5;
+            color: #4f46e5;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: background .15s, color .15s;
+            margin-bottom: 24px;
+        }
+
+        .btn-back:hover {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .content-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        p {
+            color: #475569;
+            font-size: 0.95rem;
+        }
+
+        .color-preview {
+            width: 100%;
+            height: 90px;
+            border-radius: 10px;
+            margin: 12px 0 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: inset 0 0 0 1px rgba(15,23,42,0.03);
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .color-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            outline: none;
+            padding: 0;
+            transition: transform .12s, box-shadow .12s, border-color .12s;
+        }
+
+        .color-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(15,23,42,0.18);
+        }
+
+        .color-btn.active {
+            border-color: #0f172a;
+            box-shadow: 0 0 0 2px rgba(15,23,42,0.15);
+        }
+
+        .info-box {
+            background: #f0f2f7;
+            padding: 16px 18px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: #1f2933;
+        }
+
+        .info-box div + div {
+            margin-top: 4px;
+        }
+
+        .info-box span {
+            font-family: monospace;
+        }
+
+        .btn-outline {
+            margin-top: 16px;
+            width: 100%;
+            background: white;
+            border: 2px solid #4f46e5;
+            color: #4f46e5;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: background .15s, color .15s;
+        }
+
+        .btn-outline:hover {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .hint-text {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.85rem;
+            margin-top: 24px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <a href="index.html" class="btn btn-outline btn-back">← Zurück</a>
+        <a href="index.html" class="btn-back">← Zurück</a>
 
         <div class="content-card">
             <h2>Farbauswahl mit Cookies</h2>
+            <p>Wähle eine Akzentfarbe aus. Deine Auswahl wird in einem Cookie gespeichert und beim nächsten Besuch wiederhergestellt.</p>
 
             <div class="color-preview" id="colorPreview"></div>
 
@@ -19,16 +150,16 @@
 
             <div class="info-box">
                 <div>Ausgewählte Farbe: <span id="selectedColor">#22d3ee</span></div>
-                <div>Cookie Name: selectedColor</div>
-                <div>Cookie Wert: <span id="cookieValue">nicht gesetzt</span></div>
+                <div>Cookie-Name: <span>selectedColor</span></div>
+                <div>Cookie-Wert: <span id="cookieValue">nicht gesetzt</span></div>
             </div>
 
-            <button class="btn btn-outline" onclick="clearCookie()" style="width: 100%; margin-top: 16px;">
+            <button class="btn-outline" onclick="clearCookie()">
                 Cookie löschen
             </button>
 
-            <p style="text-align: center; color: #64748b; font-size: 0.85rem; margin-top: 24px;">
-                Diese Seite demonstriert die Cookie-Funktionalität des WebServ
+            <p class="hint-text">
+                Diese Seite demonstriert die Cookie-Funktionalität des WebServ.
             </p>
         </div>
     </div>
@@ -65,8 +196,7 @@
             document.getElementById('selectedColor').textContent = selectedColor;
             const cookieValue = getCookie('selectedColor');
             document.getElementById('cookieValue').textContent = cookieValue || 'nicht gesetzt';
-            
-            // Update active state
+
             document.querySelectorAll('.color-btn').forEach(btn => {
                 if (btn.dataset.color === selectedColor) {
                     btn.classList.add('active');
@@ -88,7 +218,6 @@
             updateDisplay();
         }
 
-        // Initialize color grid
         const grid = document.getElementById('colorGrid');
         colors.forEach(color => {
             const btn = document.createElement('button');
@@ -100,7 +229,6 @@
             grid.appendChild(btn);
         });
 
-        // Load saved color
         const savedColor = getCookie('selectedColor');
         if (savedColor) {
             selectedColor = savedColor;
@@ -109,4 +237,4 @@
         updateDisplay();
     </script>
 </body>
-</html> -->
+</html>
