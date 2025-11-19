@@ -333,7 +333,7 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 		// Uploads immer relativ zum Location-Root speichern
 		std::string dir = config.root;
 		if (dir.empty())
-			dir = "./root/data/posts"; // Fallback, sollte eigentlich nicht nötig sein
+			dir = "./root/data/"; // Fallback, sollte eigentlich nicht nötig sein
 		std::cout << "POST data dir: " << dir << std::endl;
 		std::string contentType;
 		if (req.headers.count("Content-Type"))
@@ -442,7 +442,7 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 	{
 		std::string dir = config.data_dir.empty() ? "./data" : config.data_dir;
 		std::string filepath = "root/" + dir;
-		filepath += "/posts/" + req.body; // assuming the filename to delete is in the body
+		filepath += "/" + req.body; // assuming the filename to delete is in the body
 		std::cout << "DELETE path: " << filepath << std::endl;
 
 		if (fileExists(filepath) && std::remove(filepath.c_str()) == 0)

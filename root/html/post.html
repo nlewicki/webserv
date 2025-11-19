@@ -173,7 +173,7 @@
 
         <div class="content-card">
             <h2>Hochgeladene Dateien</h2>
-            <div id="posts"></div>
+            <div id="data"></div>
         </div>
     </div>
 
@@ -187,10 +187,10 @@
         }
 
         async function loadPosts() {
-            const div = document.getElementById("posts");
+            const div = document.getElementById("data");
 
             try {
-                const response = await fetch("/posts");
+                const response = await fetch("/data");
                 if (!response.ok) {
                     div.innerHTML = "<div class='empty-state'>Fehler beim Laden.</div>";
                     return;
@@ -218,7 +218,7 @@
                     <div class="file-item">
                         <span class="file-name">${name}</span>
                         <div class="file-actions">
-                            <a class="open-link" href="/posts/${encodeURIComponent(name)}" target="_blank">Öffnen</a>
+                            <a class="open-link" href="/data/${encodeURIComponent(name)}" target="_blank">Öffnen</a>
                             <button class="delete-btn" onclick="deleteFile('${encodeURIComponent(name)}')">Löschen</button>
                         </div>
                     </div>
@@ -240,7 +240,7 @@
             const formData = new FormData();
             formData.append("file", input.files[0]);
 
-            await fetch("/posts", { method: "POST", body: formData });
+            await fetch("/data", { method: "POST", body: formData });
 
             input.value = "";
             updateFileLabel();
@@ -248,7 +248,7 @@
         }
 
         async function deleteFile(name) {
-            await fetch("/posts", {
+            await fetch("/data", {
                 method: "DELETE",
                 body: name
             });
