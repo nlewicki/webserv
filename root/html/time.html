@@ -107,7 +107,7 @@
             const box = document.getElementById('output');
             box.textContent = "Lade Uhrzeit…";
 
-            fetch('cgi-bin/time.py', { cache: "no-store" })
+            fetch('root/cgi-bin/time.py', { cache: "no-store" })
                 .then(r => r.text())
                 .then(txt => {
                     box.classList.remove("loading");

@@ -418,8 +418,8 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 	else if (req.method == "DELETE")
 	{
 		std::string dir = config.data_dir.empty() ? "./data" : config.data_dir;
-		std::string filepath = dir;
-		filepath += "/" + req.body; // assuming the filename to delete is in the body
+		std::string filepath = "root/" + dir;
+		filepath += "/posts/" + req.body; // assuming the filename to delete is in the body
 		std::cout << "DELETE path: " << filepath << std::endl;
 
 		if (fileExists(filepath) && std::remove(filepath.c_str()) == 0)

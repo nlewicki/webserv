@@ -2,193 +2,261 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Datei Upload – WebServ</title>
 
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f0f0f0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif;
+            background: #f5f6fa;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            color: #222;
         }
 
-        /* zentrierter Inhalt */
-        .wrapper {
+        .container {
             max-width: 900px;
             margin: 0 auto;
+            padding: 32px 20px;
         }
 
-        a.back {
+        .btn-back {
             display: inline-block;
-            margin-bottom: 20px;
-            color: #333;
-            text-decoration: none;
-            font-size: 14px;
-            padding: 6px 10px;
-            border: 1px solid #333;
-            border-radius: 4px;
-            background: #fff;
-        }
-
-        .card {
+            padding: 10px 16px;
             background: white;
-            padding: 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 2px solid #4f46e5;
+            color: #4f46e5;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: background .15s, color .15s;
+            margin-bottom: 24px;
         }
 
-        .card h2 {
+        .btn-back:hover {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .content-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .content-card + .content-card {
+            margin-top: 24px;
+        }
+
+        h2 {
             margin-top: 0;
+            font-weight: 700;
+            margin-bottom: 18px;
         }
 
-        /* WICHTIG: block + width:100% */
+        /* Upload-Feld im gleichen Stil wie time.html-Boxen */
         .upload-box {
             display: block;
             width: 100%;
-            background: #e5e5e5;
-            border: 2px dashed #999;
-            padding: 30px;
+            background: #f0f2f7;
+            border: 2px dashed #4f46e5;
+            padding: 28px 20px;
             text-align: center;
             cursor: pointer;
-            border-radius: 6px;
+            border-radius: 10px;
             box-sizing: border-box;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            transition: background .15s, border-color .15s;
+            font-weight: 500;
+        }
+
+        .upload-box:hover {
+            background: #eef0ff;
+            border-color: #4338ca;
         }
 
         .upload-box input[type="file"] {
             display: none;
         }
 
-        button {
-            width: 100%;
-            margin-top: 5px;
-            padding: 10px;
-            font-size: 16px;
-            background: #333;
+        .btn-upload {
+            background: #4f46e5;
             color: white;
             border: none;
-            border-radius: 4px;
+            padding: 10px 16px;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            font-weight: 500;
+            transition: background .15s;
+        }
+
+        .btn-upload:hover {
+            background: #4338ca;
         }
 
         .file-item {
             padding: 10px 0;
-            border-bottom: 1px solid #ccc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
         }
 
         .file-item:last-child {
             border-bottom: none;
         }
 
-        .file-item a.open-link {
-            padding: 3px 6px;
-            color: white;
-            background: #333;
+        .file-name {
+            word-break: break-all;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .open-link {
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #4f46e5;
+            background: white;
+            color: #4f46e5;
             text-decoration: none;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-left: 10px;
+            font-size: 0.85rem;
+            transition: background .15s, color .15s;
+        }
+
+        .open-link:hover {
+            background: #4f46e5;
+            color: white;
         }
 
         .delete-btn {
-            background: red;
-            border-radius: 4px;
-            padding: 3px 6px;
-            margin-left: 6px;
+            background: #dc2626;
+            border-radius: 8px;
+            padding: 6px 10px;
             color: white;
-            font-size: 12px;
+            font-size: 0.8rem;
             cursor: pointer;
             border: none;
+        }
+
+        .empty-state {
+            color: #64748b;
+            font-style: italic;
+            font-size: 0.9rem;
         }
     </style>
 </head>
 
 <body>
-<div class="wrapper">
-    <a href="index.html" class="back">← Zurück</a>
+    <div class="container">
+        <a href="index.html" class="btn-back">← Zurück</a>
 
-    <div class="card">
-        <h2>Datei hochladen</h2>
+        <div class="content-card">
+            <h2>Datei hochladen</h2>
 
-        <form id="uploadForm" onsubmit="submitUpload(event)">
-            <label class="upload-box">
-                <span id="fileLabel">Klicke hier, um eine Datei auszuwählen</span>
-                <input type="file" id="fileInput" name="file" required onchange="updateFileLabel()">
-            </label>
+            <form id="uploadForm" onsubmit="submitUpload(event)">
+                <label class="upload-box">
+                    <span id="fileLabel">Klicke hier, um eine Datei auszuwählen</span>
+                    <input type="file" id="fileInput" name="file" required onchange="updateFileLabel()">
+                </label>
 
-            <button type="submit">Upload</button>
-        </form>
+                <button type="submit" class="btn-upload">Upload</button>
+            </form>
+        </div>
+
+        <div class="content-card">
+            <h2>Hochgeladene Dateien</h2>
+            <div id="posts"></div>
+        </div>
     </div>
 
-    <div class="card">
-        <h2>Hochgeladene Dateien</h2>
-        <div id="posts"></div>
-    </div>
-</div>
-
-<script>
-    function updateFileLabel() {
-        const input = document.getElementById("fileInput");
-        const label = document.getElementById("fileLabel");
-        label.textContent = input.files.length
-            ? input.files[0].name
-            : "Klicke hier, um eine Datei auszuwählen";
-    }
-
-    async function loadPosts() {
-        const div = document.getElementById("posts");
-
-        try {
-            const response = await fetch("/posts");
-            if (!response.ok) {
-                div.innerHTML = "Fehler beim Laden.";
-                return;
-            }
-
-            const posts = await response.json();
-
-            if (!posts.length) {
-                div.innerHTML = "Noch keine Dateien.";
-                return;
-            }
-
-            div.innerHTML = posts.map(p => {
-                const name = p.name || p.filename;
-                return `
-                    <div class="file-item">
-                        ${name}
-                        <a class="open-link" href="/uploads/${encodeURIComponent(name)}" target="_blank">Öffnen</a>
-                        <button class="delete-btn" onclick="deleteFile('${encodeURIComponent(name)}')">Löschen</button>
-                    </div>
-                `;
-            }).join("");
-        } catch {
-            div.innerHTML = "Fehler beim Laden.";
+    <script>
+        function updateFileLabel() {
+            const input = document.getElementById("fileInput");
+            const label = document.getElementById("fileLabel");
+            label.textContent = input.files.length
+                ? input.files[0].name
+                : "Klicke hier, um eine Datei auszuwählen";
         }
-    }
 
-    async function submitUpload(event) {
-        event.preventDefault();
+        async function loadPosts() {
+            const div = document.getElementById("posts");
 
-        const input = document.getElementById("fileInput");
-        if (!input.files.length) return;
+            try {
+                const response = await fetch("/posts");
+                if (!response.ok) {
+                    div.innerHTML = "<div class='empty-state'>Fehler beim Laden.</div>";
+                    return;
+                }
 
-        const formData = new FormData();
-        formData.append("file", input.files[0]);
+                const html = await response.text();
 
-        await fetch("/posts", { method: "POST", body: formData });
+                // Temporary DOM to parse autoindex HTML
+                const temp = document.createElement("div");
+                temp.innerHTML = html;
 
-        input.value = "";
-        updateFileLabel();
+                // Alle Links extrahieren
+                const links = temp.querySelectorAll("a");
+                const files = [...links]
+                    .map(a => a.textContent.trim())
+                    .filter(name => name !== "posts"); // Ordner selbst herausfiltern
+
+                if (!files.length) {
+                    div.innerHTML = "<div class='empty-state'>Noch keine Dateien.</div>";
+                    return;
+                }
+
+                // Liste rendern
+                div.innerHTML = files.map(name => `
+                    <div class="file-item">
+                        <span class="file-name">${name}</span>
+                        <div class="file-actions">
+                            <a class="open-link" href="/posts/${encodeURIComponent(name)}" target="_blank">Öffnen</a>
+                            <button class="delete-btn" onclick="deleteFile('${encodeURIComponent(name)}')">Löschen</button>
+                        </div>
+                    </div>
+                `).join("");
+            } catch(err) {
+                div.innerHTML = "<div class='empty-state'>Fehler beim Laden.</div>";
+            }
+        }
+
+
+
+
+        async function submitUpload(event) {
+            event.preventDefault();
+
+            const input = document.getElementById("fileInput");
+            if (!input.files.length) return;
+
+            const formData = new FormData();
+            formData.append("file", input.files[0]);
+
+            await fetch("/posts", { method: "POST", body: formData });
+
+            input.value = "";
+            updateFileLabel();
+            loadPosts();
+        }
+
+        async function deleteFile(name) {
+            await fetch("/posts", {
+                method: "DELETE",
+                body: name
+            });
+
+            loadPosts();
+        }
+
         loadPosts();
-    }
-
-    async function deleteFile(name) {
-        await fetch("/posts/" + name, { method: "DELETE" });
-        loadPosts();
-    }
-
-    loadPosts();
-</script>
+    </script>
 </body>
 </html>
