@@ -203,6 +203,10 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 	res.headers["Keep-Alive"] = req.keep_alive ? "timeout=5, max=100" : "timeout=0, max=0";
     res.headers["Content-Type"] = "text/html";
 
+	std::string color = "#ffffff"; // Fallback Farbe
+    if (req.cookies.count("color"))
+        color = req.cookies.at("color");
+
 	std::string path = config.root + "/" + config.index; // default path 
 		
 	printf("path: %s\n", path.c_str());
@@ -250,6 +254,7 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 			if (fileExists(indexFile))
 			{
 				// serve index file
+
 				res.statusCode = 200;
 				res.reasonPhrase = getStatusMessage(200);
 				res.body = readFile(indexFile);
@@ -289,13 +294,25 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
 				return cgi.execute(req); // consider setting env/path in req for CGI
 			}
 
-			// Serve file
 			res.statusCode = 200;
 			res.reasonPhrase = getStatusMessage(200);
 			res.body = readFile(fsPath);
 			res.headers["Content-Type"] = getMimeType(fsPath);
+
+			if (res.headers["Content-Type"] == "text/html") {
+				size_t pos = res.body.find("<body");
+				if (pos != std::string::npos) {
+					size_t end = res.body.find(">", pos);
+					if (end != std::string::npos) {
+						std::string insert = " style=\"--user-color: " + color + ";\"";
+						res.body.insert(end, insert);
+					}
+				}
+			}
+
 			res.headers["Content-Length"] = std::to_string(res.body.size());
 			return res;
+
 		}
 		else
 		{
