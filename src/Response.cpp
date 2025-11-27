@@ -511,44 +511,60 @@ Response& ResponseHandler::methodDELETE(const Request& req, Response& res, const
 
 Response ResponseHandler::handleRequest(const Request& req, const LocationConfig& config)
 {
-	Response res;
-	res.keep_alive = req.keep_alive;
+    Response res;
+    res.keep_alive = req.keep_alive;
 
-	// default headers & cookies
-	setHeaders(res, req);
-	
-	std::string path = config.root + "/" + config.index; // default path
+    // default headers & cookies
+    setHeaders(res, req);
+
+    // ────────────────────── 413 PAYLOAD TOO LARGE CHECK ──────────────────────
+   // → Ersetze durch:
+	size_t max_body_size = 10 * 1024 * 1024;  // 10MB fallback (wie nginx default)
+
+	if (config.has_client_max_body_size && config.client_max_body_size > 0) {
+		max_body_size = config.client_max_body_size;
+	}
+
+	if ((req.method == "POST" || req.method == "PUT") && req.body.size() > max_body_size) {
+		res.statusCode = 413;
+		res.reasonPhrase = "Payload Too Large";
+		res.body = "<h1>413 Payload Too Large</h1>";
+		res.headers["Content-Type"] = "text/html";
+		res.headers["Content-Length"] = std::to_string(res.body.size());
+		return res;
+	}
+    // ────────────────────────────────────────────────────────────────────────
+
+    std::string path = config.root + "/" + config.index;
 
 #ifdef DEBUG
-	printf("path: %s\n", path.c_str());
+    printf("path: %s\n", path.c_str());
 #endif
-	if (req.method == "GET")
-	{
-		return methodGET(req, res, config);
-	}
-	else if (req.method == "POST")
-	{
-		return methodPOST(req, res, config);
-	}
-	else if (req.method == "DELETE")
-	{
-		return methodDELETE(req, res, config);
-	}
-	else
-	{
-		res.statusCode = 405;
-		res.reasonPhrase = getStatusMessage(405);
+
+    if (req.method == "GET") {
+        return methodGET(req, res, config);
+    }
+    else if (req.method == "POST") {
+        return methodPOST(req, res, config);
+    }
+    else if (req.method == "DELETE") {
+        return methodDELETE(req, res, config);
+    }
+    else {
+        res.statusCode = 405;
+        res.reasonPhrase = getStatusMessage(405);
         res.body = "<h1>405 Method Not Allowed</h1>";
-	}
+    }
 
-	res.headers ["Content-Length"] = std::to_string(res.body.size());
+    res.headers["Content-Length"] = std::to_string(res.body.size());
 
 #ifdef DEBUG
-		std::cout << "method : " << req.method << std::endl;
-		std::cout << "path : " << path << std::endl;
-		std::cout << "body : " << req.body << std::endl;
-		std::cout << res.toString() << std::endl;
+    std::cout << "method : " << req.method << std::endl;
+    std::cout << "path : " << path << std::endl;
+    std::cout << "body size: " << req.body.size() << " / max: " << max_body_size << std::endl;
+    std::cout << res.toString() << std::endl;
 #endif
 
-	return res;
+    return res;
 }
+

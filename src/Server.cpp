@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nlewicki <nlewicki@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:36 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/26 11:37:17 by nlewicki         ###   ########.fr       */
+/*   Updated: 2025/11/27 10:45:16 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -469,7 +469,12 @@ int Server::run(int argc, char* argv[])
         if (server.error_pages.empty())
             server.error_pages = g_cfg.default_error_pages;
 
-        for (auto& loc : server.locations) {
+        for (auto& loc : server.locations)
+    {
+        if (!loc.has_client_max_body_size) {
+            loc.client_max_body_size = server.client_max_body_size;
+            loc.has_client_max_body_size = true;  // optional, aber sauber
+        }
             if (loc.index.empty())
                 loc.index = "index.html";
             if (loc.methods.empty())

@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:26 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/17 11:27:46 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/11/27 10:40:27 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,6 +53,12 @@ struct LocationConfig {
 	std::string error_dir;      // z.B. "./errors"
 	std::string data_dir;       // z.B. "./data"
 	std::string data_store;     // z.B. "$(data_dir)/posts.json"
+
+	size_t client_max_body_size = 0;           // 0 = nicht gesetzt → erbt
+    bool has_client_max_body_size = false;     // wichtig: um zu wissen, ob überschrieben wurde
+
+    // Konstruktor (falls du keinen hast)
+    LocationConfig() : client_max_body_size(0), has_client_max_body_size(false) {}
 };
 
 // Struktur für Server-Konfiguration

@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/20 12:53:20 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/26 11:32:40 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/11/27 10:40:54 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -105,6 +105,10 @@ void Config::parseLocationBlock(std::ifstream& file, int& lineNum,
 		else if (key == "allow_methods" && !params.empty()) currentLocation->methods = params;
 		else if (key == "cgi" && params.size() >= 2) currentLocation->cgi[params[0]] = params[1];
 		else if (key == "data_store" && !params.empty()) currentLocation->data_store = params[0];
+		else if (key == "client_max_body_size" && !params.empty()) {
+    currentLocation->client_max_body_size = parseSize(params[0]);
+    currentLocation->has_client_max_body_size = true;
+}
 		else throw std::runtime_error("Unknown directive: " + key);
 	}
 }
