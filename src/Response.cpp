@@ -283,7 +283,7 @@ bool ResponseHandler::handleDirectoryRequest(const std::string& url, const std::
         return true;
     }
     // index disabled
-    res = makeHtmlResponse(403, "<h1>403 Forbidden</h1><p>Index disabled.</p>");
+    res = makeHtmlResponse(404, "<h1>404 Not Found</h1>");
     return true;
 }
 
@@ -541,18 +541,31 @@ Response ResponseHandler::handleRequest(const Request& req, const LocationConfig
     printf("path: %s\n", path.c_str());
 #endif
 
-    if (req.method == "GET") {
-        return methodGET(req, res, config);
-    }
-    else if (req.method == "POST") {
-        return methodPOST(req, res, config);
-    }
-    else if (req.method == "DELETE") {
-        return methodDELETE(req, res, config);
-    }
-    else {
-        res.statusCode = 405;
-        res.reasonPhrase = getStatusMessage(405);
+    // debug check allowed mehtods
+    std::cout << "Allowed methods: ";
+    for (size_t i = 0; i < config.methods.size(); ++i)
+        std::cout << config.methods[i] << " ";
+    std::cout << std::endl;
+
+	if (req.method == "GET" && config.methods.end() !=
+        std::find(config.methods.begin(), config.methods.end(), "GET"))
+	{
+		return methodGET(req, res, config);
+	}
+	else if (req.method == "POST" && config.methods.end() !=
+        std::find(config.methods.begin(), config.methods.end(), "POST"))
+	{
+		return methodPOST(req, res, config);
+	}
+	else if (req.method == "DELETE" && config.methods.end() !=
+        std::find(config.methods.begin(), config.methods.end(), "DELETE"))
+	{
+		return methodDELETE(req, res, config);
+	}
+	else
+	{
+		res.statusCode = 405;
+		res.reasonPhrase = getStatusMessage(405);
         res.body = "<h1>405 Method Not Allowed</h1>";
     }
 

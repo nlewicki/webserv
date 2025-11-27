@@ -6,7 +6,7 @@
 /*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:36 by mhummel           #+#    #+#             */
-/*   Updated: 2025/11/27 10:45:16 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/11/27 10:50:48 by mhummel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -102,7 +102,7 @@ static void setupBuiltinDefaultConfig()
 	srv.listen_host = "127.0.0.1";
 	srv.listen_port = 8080;
 	srv.server_name = "localhost";
-	srv.client_max_body_size = 2 * 1024 * 1024;  // 2M – wie in conf
+	srv.client_max_body_size = 10 * 1024 * 1024;  // 10M – wie in conf
 
 	// Globale Direktive
 	g_cfg.default_error_pages[404] = "/errors/404.html";
@@ -313,6 +313,8 @@ bool Server::handleClientRead(size_t &i, long now_ms, char* buf, size_t buf_size
         if (n > 0)
         {
             Client &c = clients[i];
+
+
             c.last_active_ms = now_ms;
             c.rx.append(buf, n);
             #ifdef DEBUG
@@ -335,6 +337,37 @@ bool Server::handleClientRead(size_t &i, long now_ms, char* buf, size_t buf_size
                 size_t clEnd = headers.find("\r\n", clPos);
                 std::string clStr = headers.substr(clPos, clEnd - clPos);
                 contentLength = std::atoi(clStr.c_str());
+            }
+
+            std::cout << "[DEBUG] CL=" << contentLength << " max=" << c.max_body_bytes << std::endl;
+
+            // --- NEU: Body-Limit prüfen ---
+            if (contentLength > 0 && c.max_body_bytes > 0 && contentLength > c.max_body_bytes)
+            {
+                std::cout << "[DEBUG] Body too large: " << contentLength << " > " << c.max_body_bytes << "\n";
+                // 413 Response bauen
+                Response res;
+                res.statusCode   = 413;
+                res.reasonPhrase = "Payload Too Large";
+                res.body         = "<h1>413 Payload Too Large</h1>";
+
+                // Minimal-Header
+                res.headers["Content-Type"]   = "text/html";
+                res.headers["Content-Length"] = std::to_string(res.body.size());
+                res.headers["Connection"]     = "close";
+                res.headers["Server"]         = "webserv/1.0";
+
+                // Antwort in den Client schreiben
+                c.tx         = res.toString();
+                c.keep_alive = false;
+                fds[i].events |= POLLOUT;
+
+                // eingelesene Daten verwerfen
+                c.rx.clear();
+                c.state = RxState::READY;
+
+                // Body NICHT weiter lesen, Request NICHT parsen
+                return true;
             }
 
             size_t totalNeeded = headerEnd + 4 + contentLength;
@@ -465,7 +498,7 @@ int Server::run(int argc, char* argv[])
         if (server.listen_port == 0)
             server.listen_port = 80;
         if (server.client_max_body_size == 0)
-            server.client_max_body_size = 1048576;
+            server.client_max_body_size = g_cfg.default_client_max_body_size;
         if (server.error_pages.empty())
             server.error_pages = g_cfg.default_error_pages;
 
