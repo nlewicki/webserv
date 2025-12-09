@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mhummel <mhummel@student.42.fr>            +#+  +:+       +#+        */
+/*   By: nicolewicki <nicolewicki@student.42.fr>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/21 09:27:36 by mhummel           #+#    #+#             */
-/*   Updated: 2025/12/08 10:22:58 by mhummel          ###   ########.fr       */
+/*   Updated: 2025/12/08 21:21:00 by nicolewicki      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,9 @@ static std::unordered_set<int> listener_fds;
 static std::vector<Client>     clients;
 static std::unordered_map<int /*port*/, std::vector<size_t> /*server indices*/> servers_by_port;
 static std::unordered_map<int /*lfd*/,  int /*port*/>      port_by_listener_fd;
+
+static const size_t MAX_HEADER_BUFFER = 16 * 1024; // 16 KiB für Header
+
 
 int make_nonblocking(int fd)
 {
@@ -293,10 +296,29 @@ bool Server::handleClientRead(size_t &i, long now_ms, char* buf, size_t buf_size
         c.last_active_ms = now_ms;
         c.rx.append(buf, n);
 
+        // 0) Header-Buffer-Guard
+        if (!c.header_done && c.rx.size() > MAX_HEADER_BUFFER)
+        {
+            ResponseHandler handler;
+            Response res = handler.makeHtmlResponse(
+                431,
+                "<h1>431 Request Header Fields Too Large</h1>"
+            );
+            c.tx = res.toString();
+
+            // Ab jetzt nur noch schreiben, nichts mehr lesen
+            fds[i].events &= ~POLLIN;
+            fds[i].events |= POLLOUT;
+
+            return true;
+        }
+
         // 1) Header-Ende suchen
         size_t headerEnd = c.rx.find("\r\n\r\n");
         if (headerEnd == std::string::npos)
             return true; // Header noch nicht vollständig
+
+        c.header_done = true;
 
         std::string headers = c.rx.substr(0, headerEnd + 4);
 
@@ -337,23 +359,34 @@ bool Server::handleClientRead(size_t &i, long now_ms, char* buf, size_t buf_size
         // 4) Location bestimmen
         const LocationConfig& lc = resolve_location(sc, req.path);
 
-        // 5. Early Check für Content-Length (falls nicht chunked)
+        // 5) Early Check für Content-Length (falls nicht chunked)
         bool isChunked = req.headers.count("Transfer-Encoding") &&
-                        req.headers["Transfer-Encoding"] == "chunked";
+                         req.headers["Transfer-Encoding"] == "chunked";
 
         size_t contentLength = 0;
+        size_t maxBody = (lc.client_max_body_size > 0)
+                         ? lc.client_max_body_size
+                         : sc.client_max_body_size;
+
         if (!isChunked && req.headers.count("Content-Length")) {
             try {
                 contentLength = std::stoul(req.headers["Content-Length"]);
-            } catch (...) {}
-
-            // Größenprüfung mit Location/Server-Konfiguration
-            size_t maxBody = (lc.client_max_body_size > 0)
-                            ? lc.client_max_body_size
-                            : sc.client_max_body_size;
+            } catch (...) {
+                contentLength = 0;
+            }
 
             if (maxBody > 0 && contentLength > maxBody) {
-                req.error = 413;
+                // Direkt 413 senden, Body ignorieren
+                ResponseHandler handler;
+                Response res = handler.makeHtmlResponse(
+                    413,
+                    "<h1>413 Payload Too Large</h1>"
+                );
+                c.tx = res.toString();
+                c.keep_alive = false;            // nach Fehler Verbindung schließen
+                fds[i].events &= ~POLLIN;
+                fds[i].events |= POLLOUT;
+                return true;
             }
         }
 
@@ -385,10 +418,25 @@ bool Server::handleClientRead(size_t &i, long now_ms, char* buf, size_t buf_size
                 break;
         }
 
-        // 8. Body mit den neuen Parser-Funktionen parsen
+        // 8) Body mit den Parser-Funktionen parsen
         if (!parser.parseBody(stream, req, lc, sc)) {
-            // Fehler beim Body-Parsing (413 oder 400)
-            // req.error ist bereits gesetzt
+            int status = req.error ? req.error : 400;
+
+            ResponseHandler handler;
+            Response res = handler.makeHtmlResponse(
+                status,
+                "<h1>" + std::to_string(status) + " Error</h1>"
+            );
+
+            c.keep_alive = false;   // bei kaputtem Request ruhig Verbindung schließen
+            c.tx         = res.toString();
+            fds[i].events &= ~POLLIN;
+            fds[i].events |= POLLOUT;
+
+            // Verbrauchte Bytes entfernen
+            c.rx.erase(0, totalNeeded);
+
+            return true;
         }
 
         #ifdef DEBUG
