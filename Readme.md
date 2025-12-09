@@ -40,3 +40,11 @@ Listening on 0.0.0.0:8080
 ==> config auslesen geht nicht richtig -> post funktioniert nd
 
 https://chatgpt.com/share/6932c48b-b694-800b-b22a-7e788b891dd7
+
+
+
+Wir haben zwei Sicherheits- und Stabilitätsmechanismen ergänzt:
+
+Header-Limit + sofortige 431-Antwort, damit Clients nicht unendlich große Header in den RAM pushen können.
+
+Body-Limit für Content-Length und chunked Bodies + sofortige 413-Antwort, sodass zu große Uploads früh abgebrochen und niemals komplett eingelesen werden.
